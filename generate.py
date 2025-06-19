@@ -21,8 +21,9 @@ def composite_numbers(number_str, number_folder, target_box):
     total_width = sum(widths)
     max_height = max(heights)
     x0, y0, x1, y1 = target_box
-    box_width = x1 - x0
-    box_height = y1 - y0
+    box_width = int(round(x1 - x0))
+    box_height = int(round(y1 - y0))
+    # Scale so the numbers fill the bounding box as much as possible
     scale = min(box_width / total_width, box_height / max_height)
     scaled_imgs = [img.resize((int(w*scale), int(h*scale)), Image.LANCZOS) for img, w, h in zip(digit_imgs, widths, heights)]
     new_width = sum(img.size[0] for img in scaled_imgs)
@@ -32,15 +33,15 @@ def composite_numbers(number_str, number_folder, target_box):
     for img in scaled_imgs:
         composite.paste(img, (x, (new_height - img.size[1]) // 2), img)
         x += img.size[0]
-    final = Image.new("RGBA", (int(box_width), int(box_height)), (0,0,0,0))
+    # Center in target box
+    final = Image.new("RGBA", (box_width, box_height), (0,0,0,0))
     offset_x = (box_width - new_width) // 2
     offset_y = (box_height - new_height) // 2
     final.paste(composite, (int(offset_x), int(offset_y)), composite)
     return final
 
 def fit_text_to_box(text, font_path, box_width, box_height, max_font_size=200, min_font_size=10):
-    # Binary search for best font size
-    font_size = max_font_size
+    # Binary search for best font size to fill the box
     best_font = None
     best_size = None
     while min_font_size <= max_font_size:
@@ -56,15 +57,28 @@ def fit_text_to_box(text, font_path, box_width, box_height, max_font_size=200, m
             max_font_size = mid - 1
     return best_font, best_size
 
-def render_nameplate(text, font_path, target_box):
-    x0, y0, x1, y1 = target_box
-    box_width = int(x1 - x0)
-    box_height = int(y1 - y0)
+def hex_to_rgba(hex_color):
+    hex_color = hex_color.lstrip('#')
+    lv = len(hex_color)
+    if lv == 6:
+        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4)) + (255,)
+    elif lv == 8:
+        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4, 6))
+    else:
+        raise ValueError("Invalid hex color")
+
+def render_nameplate(text, font_path, nameplate_obj):
+    coords = nameplate_obj["coords"]
+    color = nameplate_obj.get("color", "#FFFFFF")
+    x0, y0, x1, y1 = coords
+    box_width = int(round(x1 - x0))
+    box_height = int(round(y1 - y0))
     font, (w, h) = fit_text_to_box(text, font_path, box_width, box_height)
     img = Image.new("RGBA", (box_width, box_height), (0,0,0,0))
     draw = ImageDraw.Draw(img)
     # Center text
-    draw.text(((box_width - w)//2, (box_height - h)//2), text, font=font, fill=(255,255,255,255))
+    fill_color = hex_to_rgba(color)
+    draw.text(((box_width - w)//2, (box_height - h)//2), text, font=font, fill=fill_color)
     return img
 
 def process_front(row, team_folder, coords):
@@ -75,7 +89,7 @@ def process_front(row, team_folder, coords):
     blank_front_path = os.path.join(blanks_folder, "front.png")
     blank_img = Image.open(blank_front_path).convert("RGBA")
     number_img = composite_numbers(player_number, number_folder, coords["FrontNumber"])
-    x0, y0, _, _ = [int(round(c)) for c in coords["FrontNumber"]]
+    x0, y0, x1, y1 = [int(round(c)) for c in coords["FrontNumber"]]
     temp = blank_img.copy()
     temp.paste(number_img, (x0, y0), number_img)
     alpha = blank_img.split()[-1]
@@ -96,12 +110,12 @@ def process_back(row, team_folder, coords):
     blank_img = Image.open(blank_back_path).convert("RGBA")
     # Nameplate
     nameplate_img = render_nameplate(player_name.upper(), font_path, coords["NamePlate"])
-    x0, y0, _, _ = [int(round(c)) for c in coords["NamePlate"]]
+    x0, y0, x1, y1 = [int(round(c)) for c in coords["NamePlate"]["coords"]]
     temp = blank_img.copy()
     temp.paste(nameplate_img, (x0, y0), nameplate_img)
     # Back number
     number_img = composite_numbers(player_number, number_folder, coords["BackNumber"])
-    x0, y0, _, _ = [int(round(c)) for c in coords["BackNumber"]]
+    x0, y0, x1, y1 = [int(round(c)) for c in coords["BackNumber"]]
     temp.paste(number_img, (x0, y0), number_img)
     # Alpha mask
     alpha = blank_img.split()[-1]
