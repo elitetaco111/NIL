@@ -1,0 +1,8 @@
+*.png
+*.otf
+*.txt
+*.json
+*.jsx
+*.csv
+/fonts/*
+*.DS_Store
