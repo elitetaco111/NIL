@@ -26,6 +26,16 @@ def composite_numbers(number_str, number_folder, target_box):
         composite = Image.new("RGBA", (composite_width, composite_height), (0,0,0,0))
         offset_x = (composite_width - widths[0]) // 2
         composite.paste(digit_imgs[0], (offset_x, 0), digit_imgs[0])
+    elif len(digits) == 2 and digits[0] == '1' and digits[1] == '1':
+        # Special overlap for "11"
+        overlap = int(widths[0] * 0.15)
+        composite_width = widths[0] + widths[1] - overlap
+        composite_height = max(heights)
+        composite = Image.new("RGBA", (composite_width, composite_height), (0,0,0,0))
+        # Paste first "1"
+        composite.paste(digit_imgs[0], (0, (composite_height - heights[0]) // 2), digit_imgs[0])
+        # Paste second "1" with overlap
+        composite.paste(digit_imgs[1], (widths[0] - overlap, (composite_height - heights[1]) // 2), digit_imgs[1])
     else:
         composite_width = sum(widths)
         composite_height = max(heights)
@@ -48,14 +58,20 @@ def fit_text_to_box(text, font_path, box_width, box_height, max_font_size=400, m
     best_font = None
     best_size = None
     margin = int(box_height * 0.08)  # 8% margin at the bottom
+    spacing_factor = 0.06  # Must match the spacing in render_nameplate
+
     while min_font_size <= max_font_size:
         mid = (min_font_size + max_font_size) // 2
         font = ImageFont.truetype(font_path, mid)
+        # Calculate total width with spacing
+        char_widths = [font.getbbox(char)[2] - font.getbbox(char)[0] for char in text]
+        spacing = int(mid * spacing_factor)
+        total_width = sum(char_widths) + spacing * (len(text) - 1)
         bbox = font.getbbox(text)
-        w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
-        if w <= box_width and h <= (box_height - margin):
+        h = bbox[3] - bbox[1]
+        if total_width <= box_width and h <= (box_height - margin):
             best_font = font
-            best_size = (w, h, bbox)
+            best_size = (total_width, h, bbox, spacing, char_widths)
             min_font_size = mid + 1
         else:
             max_font_size = mid - 1
@@ -71,34 +87,26 @@ def hex_to_rgba(hex_color):
     else:
         raise ValueError("Invalid hex color")
 
-def render_nameplate(text, font_path, nameplate_obj, rotation_angle=0):
+def render_nameplate(text, font_path, nameplate_obj, rotation_angle=0, y_offset_extra=0):
     coords = nameplate_obj["coords"]
     color = nameplate_obj.get("color", "#FFFFFF")
     x0, y0, x1, y1 = coords
     box_width = int(round(x1 - x0))
     box_height = int(round(y1 - y0))
-    font, (w, h, bbox) = fit_text_to_box(text, font_path, box_width, box_height)
+    font, (total_width, h, bbox, spacing, char_widths) = fit_text_to_box(
+        text, font_path, box_width, box_height
+    )
     img = Image.new("RGBA", (box_width, box_height), (0,0,0,0))
     draw = ImageDraw.Draw(img)
     fill_color = hex_to_rgba(color)
 
-    # Add extra spacing between letters
-    spacing = int(font.size * 0.06)  # 12% of font size as spacing
-    total_width = -spacing  # start negative to remove last extra space
-    char_sizes = []
-    for char in text:
-        char_bbox = font.getbbox(char)
-        char_width = char_bbox[2] - char_bbox[0]
-        char_sizes.append(char_width)
-        total_width += char_width + spacing
-
     # Center the text horizontally
     x_cursor = (box_width - total_width) // 2
-    y_offset = (box_height - h) // 2 - bbox[1]
+    y_offset = (box_height - h) // 2 - bbox[1] + y_offset_extra
 
     for i, char in enumerate(text):
         draw.text((x_cursor, y_offset), char, font=font, fill=fill_color)
-        x_cursor += char_sizes[i] + spacing
+        x_cursor += char_widths[i] + spacing
 
     # Rotate the nameplate image if needed
     if "rotation" in nameplate_obj:
@@ -139,8 +147,23 @@ def process_back(row, team_folder, coords):
     blank_img = Image.open(blank_back_path).convert("RGBA")
     # Nameplate
     rotation_angle = coords["NamePlate"].get("rotation", 0)
-    nameplate_img = render_nameplate(player_name.upper(), font_path, coords["NamePlate"], rotation_angle)
-    x0, y0, x1, y1 = [int(round(c)) for c in coords["NamePlate"]["coords"]]
+    y_offset_extra = 20 if len(player_name) >= 14 else 0
+
+    # Shift the bounding box down by y_offset_extra
+    nameplate_coords = coords["NamePlate"]["coords"].copy()
+    if y_offset_extra:
+        nameplate_coords = [
+            nameplate_coords[0],
+            nameplate_coords[1] + y_offset_extra,
+            nameplate_coords[2],
+            nameplate_coords[3] + y_offset_extra
+        ]
+    # Create a temporary NamePlate object with shifted coords
+    nameplate_obj = dict(coords["NamePlate"])
+    nameplate_obj["coords"] = nameplate_coords
+
+    nameplate_img = render_nameplate(player_name.upper(), font_path, nameplate_obj, rotation_angle, 0)
+    x0, y0, x1, y1 = [int(round(c)) for c in nameplate_coords]
     box_width = int(round(x1 - x0))
     box_height = int(round(y1 - y0))
     if rotation_angle != 0:
@@ -195,9 +218,10 @@ def add_shoulder_number(base_img, number_str, number_folder, shoulder_obj):
             composite.paste(img, (x, y), img)
             x += img.size[0]
 
-    # Scale so the composite fills the bounding box vertically, center horizontally
+    # Scale so the composite fills the bounding box vertically, then squish horizontally
     scale = box_height / composite_height
-    new_width = int(composite_width * scale)
+    shoulder_squish = 0.65  # 65% of the normal width
+    new_width = int(composite_width * scale * shoulder_squish)
     new_height = box_height
     scaled = composite.resize((new_width, new_height), Image.LANCZOS)
 
