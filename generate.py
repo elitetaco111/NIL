@@ -21,15 +21,12 @@ def composite_numbers(number_str, number_folder, target_box):
 
     # For single digit, treat as if it's two digits for scaling, but only render one
     if len(digits) == 1:
-        # Create a composite image as if there are two digits (side by side)
         composite_width = widths[0] * 2
         composite_height = heights[0]
         composite = Image.new("RGBA", (composite_width, composite_height), (0,0,0,0))
-        # Center the single digit in the "two digit" space
         offset_x = (composite_width - widths[0]) // 2
         composite.paste(digit_imgs[0], (offset_x, 0), digit_imgs[0])
     else:
-        # Multiple digits: composite side by side
         composite_width = sum(widths)
         composite_height = max(heights)
         composite = Image.new("RGBA", (composite_width, composite_height), (0,0,0,0))
@@ -39,21 +36,12 @@ def composite_numbers(number_str, number_folder, target_box):
             composite.paste(img, (x, y), img)
             x += img.size[0]
 
-    # Now scale the composite image to fit the bounding box
+    # Stretch the composite image to exactly fit the bounding box (ignore aspect ratio)
     x0, y0, x1, y1 = target_box
     box_width = int(round(x1 - x0))
     box_height = int(round(y1 - y0))
-    scale = min(box_width / composite_width, box_height / composite_height)
-    new_width = int(composite_width * scale)
-    new_height = int(composite_height * scale)
-    scaled = composite.resize((new_width, new_height), Image.LANCZOS)
-
-    # Center the scaled image in the bounding box
-    final = Image.new("RGBA", (box_width, box_height), (0,0,0,0))
-    offset_x = (box_width - new_width) // 2
-    offset_y = (box_height - new_height) // 2
-    final.paste(scaled, (offset_x, offset_y), scaled)
-    return final
+    stretched = composite.resize((box_width, box_height), Image.LANCZOS)
+    return stretched
 
 def fit_text_to_box(text, font_path, box_width, box_height, max_font_size=400, min_font_size=10):
     # Binary search for best font size to fill the box, with a little margin for descenders
@@ -130,6 +118,9 @@ def process_front(row, team_folder, coords):
     x0, y0, x1, y1 = [int(round(c)) for c in coords["FrontNumber"]]
     temp = blank_img.copy()
     temp.paste(number_img, (x0, y0), number_img)
+    # Add shoulder numbers
+    add_shoulder_number(temp, player_number, number_folder, coords["LShoulder"])
+    add_shoulder_number(temp, player_number, number_folder, coords["RShoulder"])
     alpha = blank_img.split()[-1]
     temp.putalpha(alpha)
     out_name = f"{row['Team']}_{player_name}_{player_number}_front.png".replace(" ", "_")
@@ -149,11 +140,9 @@ def process_back(row, team_folder, coords):
     # Nameplate
     rotation_angle = coords["NamePlate"].get("rotation", 0)
     nameplate_img = render_nameplate(player_name.upper(), font_path, coords["NamePlate"], rotation_angle)
-    # Calculate where to paste the rotated nameplate
     x0, y0, x1, y1 = [int(round(c)) for c in coords["NamePlate"]["coords"]]
     box_width = int(round(x1 - x0))
     box_height = int(round(y1 - y0))
-    # If rotated, center the rotated image over the bounding box
     if rotation_angle != 0:
         np_w, np_h = nameplate_img.size
         paste_x = x0 + (box_width - np_w) // 2
@@ -166,6 +155,9 @@ def process_back(row, team_folder, coords):
     number_img = composite_numbers(player_number, number_folder, coords["BackNumber"])
     x0, y0, x1, y1 = [int(round(c)) for c in coords["BackNumber"]]
     temp.paste(number_img, (x0, y0), number_img)
+    # Add shoulder numbers
+    add_shoulder_number(temp, player_number, number_folder, coords["LShoulder"])
+    add_shoulder_number(temp, player_number, number_folder, coords["RShoulder"])
     # Alpha mask
     alpha = blank_img.split()[-1]
     temp.putalpha(alpha)
@@ -173,6 +165,51 @@ def process_back(row, team_folder, coords):
     out_path = os.path.join(OUTPUT_DIR, out_name)
     temp.save(out_path)
     print(f"Saved {out_path}")
+
+def add_shoulder_number(base_img, number_str, number_folder, shoulder_obj):
+    coords = shoulder_obj["coords"]
+    rotation = shoulder_obj.get("rotation", 0)
+    x0, y0, x1, y1 = [int(round(c)) for c in coords]
+    box_width = int(round(x1 - x0))
+    box_height = int(round(y1 - y0))
+
+    # Prepare digit images
+    digits = list(str(number_str))
+    digit_imgs = [Image.open(os.path.join(number_folder, f"{d}.png")).convert("RGBA") for d in digits]
+    widths, heights = zip(*(img.size for img in digit_imgs))
+
+    # For single digit, treat as if it's two digits for scaling, but only render one
+    if len(digits) == 1:
+        composite_width = widths[0] * 2
+        composite_height = heights[0]
+        composite = Image.new("RGBA", (composite_width, composite_height), (0,0,0,0))
+        offset_x = (composite_width - widths[0]) // 2
+        composite.paste(digit_imgs[0], (offset_x, 0), digit_imgs[0])
+    else:
+        composite_width = sum(widths)
+        composite_height = max(heights)
+        composite = Image.new("RGBA", (composite_width, composite_height), (0,0,0,0))
+        x = 0
+        for img in digit_imgs:
+            y = (composite_height - img.size[1]) // 2
+            composite.paste(img, (x, y), img)
+            x += img.size[0]
+
+    # Scale so the composite fills the bounding box vertically, center horizontally
+    scale = box_height / composite_height
+    new_width = int(composite_width * scale)
+    new_height = box_height
+    scaled = composite.resize((new_width, new_height), Image.LANCZOS)
+
+    # Center horizontally in the bounding box
+    final = Image.new("RGBA", (box_width, box_height), (0,0,0,0))
+    offset_x = (box_width - new_width) // 2
+    final.paste(scaled, (offset_x, 0), scaled)
+
+    # Rotate the number image
+    rotated_number = final.rotate(rotation, expand=True, resample=Image.BICUBIC)
+    # Paste the rotated number at the top-left of the bounding box
+    base_img.paste(rotated_number, (x0, y0), rotated_number)
 
 def main():
     if not os.path.exists(OUTPUT_DIR):
