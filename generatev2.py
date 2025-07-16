@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import json
 from PIL import Image, ImageDraw, ImageFont
+import re
 
 # Paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -27,15 +28,15 @@ def composite_numbers(number_str, number_folder, target_box):
         offset_x = (composite_width - widths[0]) // 2
         composite.paste(digit_imgs[0], (offset_x, 0), digit_imgs[0])
     elif len(digits) == 2 and digits[0] == '1' and digits[1] == '1':
-        # Special overlap for "11"
-        overlap = int(widths[0] * 0.15)
-        composite_width = widths[0] + widths[1] - overlap
+        # Special case for "11": no overlap, keep aspect ratio, small gap
+        gap = int(widths[0] * 0.05)
+        composite_width = widths[0] + widths[1] + gap
         composite_height = max(heights)
         composite = Image.new("RGBA", (composite_width, composite_height), (0,0,0,0))
         # Paste first "1"
         composite.paste(digit_imgs[0], (0, (composite_height - heights[0]) // 2), digit_imgs[0])
-        # Paste second "1" with overlap
-        composite.paste(digit_imgs[1], (widths[0] - overlap, (composite_height - heights[1]) // 2), digit_imgs[1])
+        # Paste second "1" with gap
+        composite.paste(digit_imgs[1], (widths[0] + gap, (composite_height - heights[1]) // 2), digit_imgs[1])
     else:
         composite_width = sum(widths)
         composite_height = max(heights)
@@ -116,7 +117,7 @@ def render_nameplate(text, font_path, nameplate_obj, rotation_angle=0, y_offset_
     return img
 
 def process_front(row, team_folder, coords):
-    player_name = row["Preferred Name"]
+    player_name = extract_last_name_and_suffix(row["Preferred Name"])
     player_number = str(row["Player Number"])
     blanks_folder = os.path.join(team_folder, "blanks")
     number_folder = os.path.join(team_folder, "number_front")
@@ -137,7 +138,7 @@ def process_front(row, team_folder, coords):
     print(f"Saved {out_path}")
 
 def process_back(row, team_folder, coords):
-    player_name = row["Preferred Name"]
+    player_name = extract_last_name_and_suffix(row["Preferred Name"])
     player_number = str(row["Player Number"])
     blanks_folder = os.path.join(team_folder, "blanks")
     number_folder = os.path.join(team_folder, "number_back")
@@ -208,6 +209,14 @@ def add_shoulder_number(base_img, number_str, number_folder, shoulder_obj):
         composite = Image.new("RGBA", (composite_width, composite_height), (0,0,0,0))
         offset_x = (composite_width - widths[0]) // 2
         composite.paste(digit_imgs[0], (offset_x, 0), digit_imgs[0])
+    elif len(digits) == 2 and digits[0] == '1' and digits[1] == '1':
+        # Special case for "11": no overlap, keep aspect ratio, small gap
+        gap = int(widths[0] * 0.05)
+        composite_width = widths[0] + widths[1] + gap
+        composite_height = max(heights)
+        composite = Image.new("RGBA", (composite_width, composite_height), (0,0,0,0))
+        composite.paste(digit_imgs[0], (0, (composite_height - heights[0]) // 2), digit_imgs[0])
+        composite.paste(digit_imgs[1], (widths[0] + gap, (composite_height - heights[1]) // 2), digit_imgs[1])
     else:
         composite_width = sum(widths)
         composite_height = max(heights)
@@ -236,6 +245,7 @@ def add_shoulder_number(base_img, number_str, number_folder, shoulder_obj):
     base_img.paste(rotated_number, (x0, y0), rotated_number)
 
 def process_combo(row, front_path, back_path):
+    player_name = extract_last_name_and_suffix(row["Preferred Name"])
     combo_width, combo_height = 700, 1000
     scale = 0.68
 
@@ -263,12 +273,28 @@ def process_combo(row, front_path, back_path):
     combo_img.paste(front_scaled, (front_x, front_y), front_scaled)
 
     # Save combo image
-    player_name = row["Preferred Name"]
-    player_number = str(row["Player Number"])
-    out_name = f"{row['Team']}_{player_name}_{player_number}_combo.png".replace(" ", "_")
+    out_name = f"{row['Team']}_{player_name}_{row['Player Number']}_combo.png".replace(" ", "_")
     out_path = os.path.join(OUTPUT_DIR, out_name)
     combo_img.save(out_path)
     print(f"Saved {out_path}")
+
+def extract_last_name_and_suffix(full_name):
+    # Remove nicknames in quotes
+    name = re.sub(r'"[^"]*"', '', full_name).strip()
+    # Split by spaces
+    parts = name.split()
+    # List of common suffixes
+    suffixes = {"Jr.", "Sr.", "II", "III", "IV", "V"}
+    last_name = ""
+    suffix = ""
+    if len(parts) >= 2:
+        # Check if last part is a suffix
+        if parts[-1] in suffixes:
+            last_name = parts[-2]
+            suffix = parts[-1]
+        else:
+            last_name = parts[-1]
+    return f"{last_name} {suffix}".strip()
 
 def main():
     if not os.path.exists(OUTPUT_DIR):
@@ -281,10 +307,9 @@ def main():
         process_front(row, team_folder, coords)
         process_back(row, team_folder, coords)
         # Get output paths for front and back
-        player_name = row["Preferred Name"]
-        player_number = str(row["Player Number"])
-        front_name = f"{row['Team']}_{player_name}_{player_number}_front.png".replace(" ", "_")
-        back_name = f"{row['Team']}_{player_name}_{player_number}_back.png".replace(" ", "_")
+        player_name = extract_last_name_and_suffix(row["Preferred Name"])
+        front_name = f"{row['Team']}_{player_name}_{row['Player Number']}_front.png".replace(" ", "_")
+        back_name = f"{row['Team']}_{player_name}_{row['Player Number']}_back.png".replace(" ", "_")
         front_path = os.path.join(OUTPUT_DIR, front_name)
         back_path = os.path.join(OUTPUT_DIR, back_name)
         process_combo(row, front_path, back_path)
