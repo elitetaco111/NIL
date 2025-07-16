@@ -53,12 +53,11 @@ def composite_numbers(number_str, number_folder, target_box):
     stretched = composite.resize((box_width, box_height), Image.LANCZOS)
     return stretched
 
-def fit_text_to_box(text, font_path, box_width, box_height, max_font_size=400, min_font_size=10):
+def fit_text_to_box(text, font_path, box_width, box_height, spacing_factor, max_font_size=400, min_font_size=10):
     # Binary search for best font size to fill the box, with a little margin for descenders
     best_font = None
     best_size = None
     margin = int(box_height * 0.08)  # 8% margin at the bottom
-    spacing_factor = 0.06  # Must match the spacing in render_nameplate
 
     while min_font_size <= max_font_size:
         mid = (min_font_size + max_font_size) // 2
@@ -90,11 +89,12 @@ def hex_to_rgba(hex_color):
 def render_nameplate(text, font_path, nameplate_obj, rotation_angle=0, y_offset_extra=0):
     coords = nameplate_obj["coords"]
     color = nameplate_obj.get("color", "#FFFFFF")
+    spacing_factor = nameplate_obj.get("spacing_factor", 0.06) # Default to 0.06 if not present
     x0, y0, x1, y1 = coords
     box_width = int(round(x1 - x0))
     box_height = int(round(y1 - y0))
     font, (total_width, h, bbox, spacing, char_widths) = fit_text_to_box(
-        text, font_path, box_width, box_height
+        text, font_path, box_width, box_height, spacing_factor
     )
     img = Image.new("RGBA", (box_width, box_height), (0,0,0,0))
     draw = ImageDraw.Draw(img)
@@ -126,9 +126,9 @@ def process_front(row, team_folder, coords):
     x0, y0, x1, y1 = [int(round(c)) for c in coords["FrontNumber"]]
     temp = blank_img.copy()
     temp.paste(number_img, (x0, y0), number_img)
-    # Add shoulder numbers
-    add_shoulder_number(temp, player_number, number_folder, coords["LShoulder"])
-    add_shoulder_number(temp, player_number, number_folder, coords["RShoulder"])
+    # Add front shoulder numbers
+    add_shoulder_number(temp, player_number, number_folder, coords["FLShoulder"])
+    add_shoulder_number(temp, player_number, number_folder, coords["FRShoulder"])
     alpha = blank_img.split()[-1]
     temp.putalpha(alpha)
     out_name = f"{row['Team']}_{player_name}_{player_number}_front.png".replace(" ", "_")
@@ -147,7 +147,7 @@ def process_back(row, team_folder, coords):
     blank_img = Image.open(blank_back_path).convert("RGBA")
     # Nameplate
     rotation_angle = coords["NamePlate"].get("rotation", 0)
-    y_offset_extra = 20 if len(player_name) >= 14 else 0
+    y_offset_extra = 20 if len(player_name) >= 9 else 0
 
     # Shift the bounding box down by y_offset_extra
     nameplate_coords = coords["NamePlate"]["coords"].copy()
@@ -178,9 +178,9 @@ def process_back(row, team_folder, coords):
     number_img = composite_numbers(player_number, number_folder, coords["BackNumber"])
     x0, y0, x1, y1 = [int(round(c)) for c in coords["BackNumber"]]
     temp.paste(number_img, (x0, y0), number_img)
-    # Add shoulder numbers
-    add_shoulder_number(temp, player_number, number_folder, coords["LShoulder"])
-    add_shoulder_number(temp, player_number, number_folder, coords["RShoulder"])
+    # Add back shoulder numbers
+    add_shoulder_number(temp, player_number, number_folder, coords["BLShoulder"])
+    add_shoulder_number(temp, player_number, number_folder, coords["BRShoulder"])
     # Alpha mask
     alpha = blank_img.split()[-1]
     temp.putalpha(alpha)

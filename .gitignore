@@ -6,3 +6,6 @@
 *.csv
 /fonts/*
 *.DS_Store
+*.zip
+*.ttf
+*.svg
