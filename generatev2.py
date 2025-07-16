@@ -132,7 +132,7 @@ def process_front(row, team_folder, coords):
     add_shoulder_number(temp, player_number, number_folder, coords["FRShoulder"])
     alpha = blank_img.split()[-1]
     temp.putalpha(alpha)
-    out_name = f"{row['Team']}_{player_name}_{player_number}_front.png".replace(" ", "_")
+    out_name = f"{row['Internal ID']}-3.png"
     out_path = os.path.join(OUTPUT_DIR, out_name)
     temp.save(out_path)
     print(f"Saved {out_path}")
@@ -185,7 +185,7 @@ def process_back(row, team_folder, coords):
     # Alpha mask
     alpha = blank_img.split()[-1]
     temp.putalpha(alpha)
-    out_name = f"{row['Team']}_{player_name}_{player_number}_back.png".replace(" ", "_")
+    out_name = f"{row['Internal ID']}-2.png"
     out_path = os.path.join(OUTPUT_DIR, out_name)
     temp.save(out_path)
     print(f"Saved {out_path}")
@@ -273,7 +273,7 @@ def process_combo(row, front_path, back_path):
     combo_img.paste(front_scaled, (front_x, front_y), front_scaled)
 
     # Save combo image
-    out_name = f"{row['Team']}_{player_name}_{row['Player Number']}_combo.png".replace(" ", "_")
+    out_name = f"{row['Internal ID']}-1.png"
     out_path = os.path.join(OUTPUT_DIR, out_name)
     combo_img.save(out_path)
     print(f"Saved {out_path}")
@@ -299,19 +299,15 @@ def extract_last_name_and_suffix(full_name):
 def main():
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
-    df = pd.read_csv(CSV_PATH)
+    df = pd.read_csv(CSV_PATH, encoding="utf-8")
     for idx, row in df.iterrows():
         team = row["Team"]
         team_folder = os.path.join(BASE_DIR, team)
         coords = load_coords_json(team_folder)
         process_front(row, team_folder, coords)
         process_back(row, team_folder, coords)
-        # Get output paths for front and back
-        player_name = extract_last_name_and_suffix(row["Preferred Name"])
-        front_name = f"{row['Team']}_{player_name}_{row['Player Number']}_front.png".replace(" ", "_")
-        back_name = f"{row['Team']}_{player_name}_{row['Player Number']}_back.png".replace(" ", "_")
-        front_path = os.path.join(OUTPUT_DIR, front_name)
-        back_path = os.path.join(OUTPUT_DIR, back_name)
+        front_path = os.path.join(OUTPUT_DIR, f"{row['Internal ID']}-3.png")
+        back_path = os.path.join(OUTPUT_DIR, f"{row['Internal ID']}-2.png")
         process_combo(row, front_path, back_path)
 
 if __name__ == "__main__":
