@@ -29,7 +29,7 @@ def composite_numbers(number_str, number_folder, target_box):
         composite.paste(digit_imgs[0], (offset_x, 0), digit_imgs[0])
     elif len(digits) == 2 and digits[0] == '1' and digits[1] == '1':
         # Special case for "11": no overlap, keep aspect ratio, small gap
-        gap = int(widths[0] * 0.05)
+        gap = int(widths[0] * 0.2)
         composite_width = widths[0] + widths[1] + gap
         composite_height = max(heights)
         composite = Image.new("RGBA", (composite_width, composite_height), (0,0,0,0))
@@ -37,6 +37,19 @@ def composite_numbers(number_str, number_folder, target_box):
         composite.paste(digit_imgs[0], (0, (composite_height - heights[0]) // 2), digit_imgs[0])
         # Paste second "1" with gap
         composite.paste(digit_imgs[1], (widths[0] + gap, (composite_height - heights[1]) // 2), digit_imgs[1])
+        # Scale only vertically, keep original width
+        x0, y0, x1, y1 = target_box
+        box_width = int(round(x1 - x0))
+        box_height = int(round(y1 - y0))
+        scale = box_height / composite_height
+        new_width = int(composite_width * scale)
+        new_height = box_height
+        scaled = composite.resize((new_width, new_height), Image.LANCZOS)
+        # Center horizontally in the bounding box
+        final = Image.new("RGBA", (box_width, box_height), (0,0,0,0))
+        offset_x = (box_width - new_width) // 2
+        final.paste(scaled, (offset_x, 0), scaled)
+        return final
     else:
         composite_width = sum(widths)
         composite_height = max(heights)
@@ -211,7 +224,7 @@ def add_shoulder_number(base_img, number_str, number_folder, shoulder_obj):
         composite.paste(digit_imgs[0], (offset_x, 0), digit_imgs[0])
     elif len(digits) == 2 and digits[0] == '1' and digits[1] == '1':
         # Special case for "11": no overlap, keep aspect ratio, small gap
-        gap = int(widths[0] * 0.05)
+        gap = int(widths[0] * 0.10)
         composite_width = widths[0] + widths[1] + gap
         composite_height = max(heights)
         composite = Image.new("RGBA", (composite_width, composite_height), (0,0,0,0))
