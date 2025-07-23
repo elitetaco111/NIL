@@ -8,6 +8,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSV_PATH = os.path.join(BASE_DIR, "jerseystocreate.csv")
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 
+#THIS IS A DEPRECATED SCRIPT
+# It is no longer used in the current workflow, but is kept for reference.
+
 def load_coords_json(team_folder):
     coords_path = os.path.join(team_folder, "coords.json")
     with open(coords_path, "r") as f:
