@@ -1,0 +1,344 @@
+import os
+import pandas as pd
+import json
+from PIL import Image, ImageDraw, ImageFont
+import re
+
+# Paths
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CSV_PATH = os.path.join(BASE_DIR, "jerseystocreate.csv")
+OUTPUT_DIR = os.path.join(BASE_DIR, "output")
+
+def load_coords_json(team_folder):
+    coords_path = os.path.join(team_folder, "coords.json")
+    with open(coords_path, "r") as f:
+        coords = json.load(f)
+    return coords
+
+def composite_numbers(number_str, number_folder, target_box):
+    digits = list(str(number_str))
+    digit_imgs = [Image.open(os.path.join(number_folder, f"{d}.png")).convert("RGBA") for d in digits]
+    widths, heights = zip(*(img.size for img in digit_imgs))
+
+    # For single digit, treat as if it's two digits for scaling, but only render one
+    if len(digits) == 1:
+        composite_width = widths[0] * 2
+        composite_height = heights[0]
+        composite = Image.new("RGBA", (composite_width, composite_height), (0,0,0,0))
+        offset_x = (composite_width - widths[0]) // 2
+        composite.paste(digit_imgs[0], (offset_x, 0), digit_imgs[0])
+    elif len(digits) == 2 and digits[0] == '1' and digits[1] == '1':
+        # Special case for "11": no overlap, keep aspect ratio, small gap
+        gap = int(widths[0] * 0.2)
+        composite_width = widths[0] + widths[1] + gap
+        composite_height = max(heights)
+        composite = Image.new("RGBA", (composite_width, composite_height), (0,0,0,0))
+        # Paste first "1"
+        composite.paste(digit_imgs[0], (0, (composite_height - heights[0]) // 2), digit_imgs[0])
+        # Paste second "1" with gap
+        composite.paste(digit_imgs[1], (widths[0] + gap, (composite_height - heights[1]) // 2), digit_imgs[1])
+        # Scale only vertically, keep original width
+        x0, y0, x1, y1 = target_box
+        box_width = int(round(x1 - x0))
+        box_height = int(round(y1 - y0))
+        scale = box_height / composite_height
+        new_width = int(composite_width * scale)
+        new_height = box_height
+        scaled = composite.resize((new_width, new_height), Image.LANCZOS)
+        # Center horizontally in the bounding box
+        final = Image.new("RGBA", (box_width, box_height), (0,0,0,0))
+        offset_x = (box_width - new_width) // 2
+        final.paste(scaled, (offset_x, 0), scaled)
+        return final
+    else:
+        composite_width = sum(widths)
+        composite_height = max(heights)
+        composite = Image.new("RGBA", (composite_width, composite_height), (0,0,0,0))
+        x = 0
+        for img in digit_imgs:
+            y = (composite_height - img.size[1]) // 2
+            composite.paste(img, (x, y), img)
+            x += img.size[0]
+
+    # Stretch the composite image to exactly fit the bounding box (ignore aspect ratio)
+    x0, y0, x1, y1 = target_box
+    box_width = int(round(x1 - x0))
+    box_height = int(round(y1 - y0))
+    stretched = composite.resize((box_width, box_height), Image.LANCZOS)
+    return stretched
+
+def fit_text_to_box(text, font_path, box_width, box_height, spacing_factor, max_font_size=400, min_font_size=10):
+    # Binary search for best font size to fill the box, with a little margin for descenders
+    best_font = None
+    best_size = None
+    margin = int(box_height * 0.08)  # 8% margin at the bottom
+
+    while min_font_size <= max_font_size:
+        mid = (min_font_size + max_font_size) // 2
+        font = ImageFont.truetype(font_path, mid)
+        # Calculate total width with spacing
+        char_widths = [font.getbbox(char)[2] - font.getbbox(char)[0] for char in text]
+        spacing = int(mid * spacing_factor)
+        total_width = sum(char_widths) + spacing * (len(text) - 1)
+        bbox = font.getbbox(text)
+        h = bbox[3] - bbox[1]
+        if total_width <= box_width and h <= (box_height - margin):
+            best_font = font
+            best_size = (total_width, h, bbox, spacing, char_widths)
+            min_font_size = mid + 1
+        else:
+            max_font_size = mid - 1
+    return best_font, best_size
+
+def hex_to_rgba(hex_color):
+    hex_color = hex_color.lstrip('#')
+    lv = len(hex_color)
+    if lv == 6:
+        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4)) + (255,)
+    elif lv == 8:
+        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4, 6))
+    else:
+        raise ValueError("Invalid hex color")
+
+def render_nameplate(text, font_path, nameplate_obj, rotation_angle=0, y_offset_extra=0):
+    coords = nameplate_obj["coords"]
+    color = nameplate_obj.get("color", "#FFFFFF")
+    spacing_factor = nameplate_obj.get("spacing_factor", 0.06) # Default to 0.06 if not present
+    x0, y0, x1, y1 = coords
+    box_width = int(round(x1 - x0))
+    box_height = int(round(y1 - y0))
+    font, (total_width, h, bbox, spacing, char_widths) = fit_text_to_box(
+        text, font_path, box_width, box_height, spacing_factor
+    )
+    img = Image.new("RGBA", (box_width, box_height), (0,0,0,0))
+    draw = ImageDraw.Draw(img)
+    fill_color = hex_to_rgba(color)
+
+    # Center the text horizontally
+    x_cursor = (box_width - total_width) // 2
+    y_offset = (box_height - h) // 2 - bbox[1] + y_offset_extra
+
+    for i, char in enumerate(text):
+        draw.text((x_cursor, y_offset), char, font=font, fill=fill_color)
+        x_cursor += char_widths[i] + spacing
+
+    # Rotate the nameplate image if needed
+    if "rotation" in nameplate_obj:
+        rotation_angle = nameplate_obj["rotation"]
+    if rotation_angle != 0:
+        img = img.rotate(rotation_angle, expand=True, resample=Image.BICUBIC)
+    return img
+
+def process_front(row, team_folder, coords):
+    player_name, player_number = extract_name_and_number(row["Jersey Characters"])
+    blanks_folder = os.path.join(team_folder, "blanks")
+    number_folder = os.path.join(team_folder, "number_front")
+    blank_front_path = os.path.join(blanks_folder, "front.png")
+    blank_img = Image.open(blank_front_path).convert("RGBA")
+    number_img = composite_numbers(player_number, number_folder, coords["FrontNumber"])
+    x0, y0, x1, y1 = [int(round(c)) for c in coords["FrontNumber"]]
+    temp = blank_img.copy()
+    temp.paste(number_img, (x0, y0), number_img)
+    # Add front shoulder numbers
+    add_shoulder_number(temp, player_number, number_folder, coords["FLShoulder"])
+    add_shoulder_number(temp, player_number, number_folder, coords["FRShoulder"])
+    alpha = blank_img.split()[-1]
+    temp.putalpha(alpha)
+    out_name = f"{row['Internal ID']}-3.png"
+    out_path = os.path.join(OUTPUT_DIR, out_name)
+    temp.save(out_path)
+    print(f"Saved {out_path}")
+
+def process_back(row, team_folder, coords):
+    player_name, player_number = extract_name_and_number(row["Jersey Characters"])
+    blanks_folder = os.path.join(team_folder, "blanks")
+    number_folder = os.path.join(team_folder, "number_back")
+    fonts_folder = os.path.join(team_folder, "fonts")
+    font_path = os.path.join(fonts_folder, "NamePlate.otf")
+    blank_back_path = os.path.join(blanks_folder, "back.png")
+    blank_img = Image.open(blank_back_path).convert("RGBA")
+    # Nameplate
+    rotation_angle = coords["NamePlate"].get("rotation", 0)
+    y_offset_extra = 20 if len(player_name) >= 9 else 0
+
+    # Shift the bounding box down by y_offset_extra
+    nameplate_coords = coords["NamePlate"]["coords"].copy()
+    if y_offset_extra:
+        nameplate_coords = [
+            nameplate_coords[0],
+            nameplate_coords[1] + y_offset_extra,
+            nameplate_coords[2],
+            nameplate_coords[3] + y_offset_extra
+        ]
+    # Create a temporary NamePlate object with shifted coords
+    nameplate_obj = dict(coords["NamePlate"])
+    nameplate_obj["coords"] = nameplate_coords
+
+    nameplate_img = render_nameplate(player_name.upper(), font_path, nameplate_obj, rotation_angle, 0)
+    x0, y0, x1, y1 = [int(round(c)) for c in nameplate_coords]
+    box_width = int(round(x1 - x0))
+    box_height = int(round(y1 - y0))
+    if rotation_angle != 0:
+        np_w, np_h = nameplate_img.size
+        paste_x = x0 + (box_width - np_w) // 2
+        paste_y = y0 + (box_height - np_h) // 2
+    else:
+        paste_x, paste_y = x0, y0
+    temp = blank_img.copy()
+    temp.paste(nameplate_img, (paste_x, paste_y), nameplate_img)
+    # Back number
+    number_img = composite_numbers(player_number, number_folder, coords["BackNumber"])
+    x0, y0, x1, y1 = [int(round(c)) for c in coords["BackNumber"]]
+    temp.paste(number_img, (x0, y0), number_img)
+    # Add back shoulder numbers
+    add_shoulder_number(temp, player_number, number_folder, coords["BLShoulder"])
+    add_shoulder_number(temp, player_number, number_folder, coords["BRShoulder"])
+    # Alpha mask
+    alpha = blank_img.split()[-1]
+    temp.putalpha(alpha)
+    out_name = f"{row['Internal ID']}-2.png"
+    out_path = os.path.join(OUTPUT_DIR, out_name)
+    temp.save(out_path)
+    print(f"Saved {out_path}")
+
+def add_shoulder_number(base_img, number_str, number_folder, shoulder_obj):
+    coords = shoulder_obj["coords"]
+    rotation = shoulder_obj.get("rotation", 0)
+    x0, y0, x1, y1 = [int(round(c)) for c in coords]
+    box_width = int(round(x1 - x0))
+    box_height = int(round(y1 - y0))
+
+    # Prepare digit images
+    digits = list(str(number_str))
+    digit_imgs = [Image.open(os.path.join(number_folder, f"{d}.png")).convert("RGBA") for d in digits]
+    widths, heights = zip(*(img.size for img in digit_imgs))
+
+    # For single digit, treat as if it's two digits for scaling, but only render one
+    if len(digits) == 1:
+        composite_width = widths[0] * 2
+        composite_height = heights[0]
+        composite = Image.new("RGBA", (composite_width, composite_height), (0,0,0,0))
+        offset_x = (composite_width - widths[0]) // 2
+        composite.paste(digit_imgs[0], (offset_x, 0), digit_imgs[0])
+    elif len(digits) == 2 and digits[0] == '1' and digits[1] == '1':
+        # Special case for "11": no overlap, keep aspect ratio, small gap
+        gap = int(widths[0] * 0.10)
+        composite_width = widths[0] + widths[1] + gap
+        composite_height = max(heights)
+        composite = Image.new("RGBA", (composite_width, composite_height), (0,0,0,0))
+        composite.paste(digit_imgs[0], (0, (composite_height - heights[0]) // 2), digit_imgs[0])
+        composite.paste(digit_imgs[1], (widths[0] + gap, (composite_height - heights[1]) // 2), digit_imgs[1])
+    else:
+        composite_width = sum(widths)
+        composite_height = max(heights)
+        composite = Image.new("RGBA", (composite_width, composite_height), (0,0,0,0))
+        x = 0
+        for img in digit_imgs:
+            y = (composite_height - img.size[1]) // 2
+            composite.paste(img, (x, y), img)
+            x += img.size[0]
+
+    # Scale so the composite fills the bounding box vertically, then squish horizontally
+    scale = box_height / composite_height
+    shoulder_squish = 0.65  # 65% of the normal width
+    new_width = int(composite_width * scale * shoulder_squish)
+    new_height = box_height
+    scaled = composite.resize((new_width, new_height), Image.LANCZOS)
+
+    # Center horizontally in the bounding box
+    final = Image.new("RGBA", (box_width, box_height), (0,0,0,0))
+    offset_x = (box_width - new_width) // 2
+    final.paste(scaled, (offset_x, 0), scaled)
+
+    # Rotate the number image
+    rotated_number = final.rotate(rotation, expand=True, resample=Image.BICUBIC)
+    # Paste the rotated number at the top-left of the bounding box
+    base_img.paste(rotated_number, (x0, y0), rotated_number)
+
+def process_combo(row, front_path, back_path):
+    combo_width, combo_height = 700, 1000
+    scale = 0.68
+
+    # Load images
+    front_img = Image.open(front_path).convert("RGBA")
+    back_img = Image.open(back_path).convert("RGBA")
+
+    # Scale images
+    front_scaled = front_img.resize(
+        (int(front_img.width * scale), int(front_img.height * scale)), Image.LANCZOS
+    )
+    back_scaled = back_img.resize(
+        (int(back_img.width * scale), int(back_img.height * scale)), Image.LANCZOS
+    )
+
+    # Create blank canvas
+    combo_img = Image.new("RGBA", (combo_width, combo_height), (0, 0, 0, 0))
+
+    # Place back jersey at top-left
+    combo_img.paste(back_scaled, (-14, 90), back_scaled)
+
+    # Place front jersey 40% down and 40% right, overlayed
+    front_x = int(combo_width * 0.30) + 13
+    front_y = int(combo_height * 0.18) + 70
+    combo_img.paste(front_scaled, (front_x, front_y), front_scaled)
+
+    # Save combo image
+    out_name = f"{row['Internal ID']}-1.png"
+    out_path = os.path.join(OUTPUT_DIR, out_name)
+    combo_img.save(out_path)
+    print(f"Saved {out_path}")
+
+def extract_last_name_and_suffix(full_name):
+    # Remove nicknames in quotes
+    name = re.sub(r'"[^"]*"', '', full_name).strip()
+    # Split by spaces
+    parts = name.split()
+    # List of common suffixes
+    suffixes = {"Jr.", "Sr.", "II", "III", "IV", "V"}
+    last_name = ""
+    suffix = ""
+    if len(parts) >= 2:
+        # Check if last part is a suffix
+        if parts[-1] in suffixes:
+            last_name = parts[-2]
+            suffix = parts[-1]
+        else:
+            last_name = parts[-1]
+    return f"{last_name} {suffix}".strip()
+
+def extract_name_and_number(jersey_characters):
+    # Extracts the name (letters and spaces) and number (digits) from Jersey Characters
+    match = re.match(r"([A-Za-z\s]+)\s*(\d+)$", jersey_characters.strip())
+    if match:
+        name = match.group(1).strip()
+        number = match.group(2)
+        return name, number
+    else:
+        # fallback: treat all non-digits as name, last digits as number
+        name = ''.join([c for c in jersey_characters if not c.isdigit()]).strip()
+        number = ''.join([c for c in jersey_characters if c.isdigit()])
+        return name, number
+
+def main():
+    if not os.path.exists(OUTPUT_DIR):
+        os.makedirs(OUTPUT_DIR)
+    df = pd.read_csv(CSV_PATH, encoding="utf-8")
+    for idx, row in df.iterrows():
+        # Use Team and Color List to find the asset folder
+        team_folder_name = f"{row['Team']}-{row['Color List']}"
+        team_folder = os.path.join(BASE_DIR, team_folder_name)
+        coords = load_coords_json(team_folder)
+        # Extract name and number from Jersey Characters
+        player_name, player_number = extract_name_and_number(row["Jersey Characters"])
+        # Patch row for downstream functions
+        row = row.copy()
+        row["Preferred Name"] = player_name
+        row["Player Number"] = player_number
+        process_front(row, team_folder, coords)
+        process_back(row, team_folder, coords)
+        front_path = os.path.join(OUTPUT_DIR, f"{row['Internal ID']}-3.png")
+        back_path = os.path.join(OUTPUT_DIR, f"{row['Internal ID']}-2.png")
+        process_combo(row, front_path, back_path)
+
+if __name__ == "__main__":
+    main()
