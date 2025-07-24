@@ -1,3 +1,18 @@
+# Created by Dave Nissly with asset help from Anisha Gautam and GitHub Copilot
+# Jersey Generation Script - Rally House
+#
+# This script generates jersey images based on a CSV input file and team asset folders.
+# It processes front and back jersey images, composites numbers, and renders nameplates.
+# It also creates a combined image for each player, overlaying the front jersey on the back.
+# Generates based on netsuite saved search from NIL buyer
+# Asset Folders are named as "{Team}-{Color List}" and contain:
+# - "blanks" folder with front.png and back.png
+# - "number_front", "number_back", and "number_shoulder" folders with digit pngs (0-9) approx 2880 px tall
+# - "fonts" folder with NamePlate.otf
+# - "coords.json" file with bounding box coordinates for various elements and color hex for nameplate
+# - examples folder with example jersey images for reference
+#
+
 import os
 import pandas as pd
 import json
@@ -283,7 +298,7 @@ def process_combo(row, front_path, back_path):
     combo_img.paste(front_scaled, (front_x, front_y), front_scaled)
 
     # Save combo image
-    out_name = f"{row['Internal ID']}-1.png"
+    out_name = f"{row['Name']}-1.png"
     out_path = os.path.join(OUTPUT_DIR, out_name)
     combo_img.save(out_path)
     print(f"Saved {out_path}")
@@ -336,8 +351,8 @@ def main():
         row["Player Number"] = player_number
         process_front(row, team_folder, coords)
         process_back(row, team_folder, coords)
-        front_path = os.path.join(OUTPUT_DIR, f"{row['Internal ID']}-3.png")
-        back_path = os.path.join(OUTPUT_DIR, f"{row['Internal ID']}-2.png")
+        front_path = os.path.join(OUTPUT_DIR, f"{row['Name']}-3.png")
+        back_path = os.path.join(OUTPUT_DIR, f"{row['Name']}-2.png")
         process_combo(row, front_path, back_path)
 
 if __name__ == "__main__":
