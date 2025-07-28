@@ -4,20 +4,20 @@
   "NamePlate": {
     "coords": [159, 140, 489, 210],
     "color": "#fcb525",
-    "rotation": -0.5,
+    "rotation": -0.7,
     "spacing_factor": 0.06
   },
   "FLShoulder": {
-    "coords": [90,41,205,112],
-    "rotation": -70
+    "coords": [90,44,205,120],
+    "rotation": -65
   },
   "FRShoulder": {
-    "coords": [473,41,554,112],
-    "rotation": 70
+    "coords": [473,35,554,107],
+    "rotation": 75
   },
   "BLShoulder": {
-    "coords": [120,41,175,112],
-    "rotation": -70
+    "coords": [100,50,175,130],
+    "rotation": -55
   },
   "BRShoulder": {
     "coords": [462,41,574,112],
