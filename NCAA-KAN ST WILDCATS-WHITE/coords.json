@@ -4,8 +4,8 @@
   "NamePlate": {
     "coords": [159, 150, 489, 220],
     "color": "#371e44",
-    "rotation": -0.7,
-    "spacing_factor": -0.01
+    "rotation": -0.9,
+    "spacing_factor": -0.05
   },
   "FLShoulder": {
     "coords": [87,41,176,120],
