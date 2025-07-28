@@ -159,7 +159,7 @@ def process_front(row, team_folder, coords):
     add_shoulder_number(temp, player_number, number_folder, coords["FRShoulder"])
     alpha = blank_img.split()[-1]
     temp.putalpha(alpha)
-    out_name = f"{row['Internal ID']}-3.png"
+    out_name = f"{row['Name']}-3.png"
     out_path = os.path.join(OUTPUT_DIR, out_name)
     temp.save(out_path)
     print(f"Saved {out_path}")
@@ -203,15 +203,28 @@ def process_back(row, team_folder, coords):
     temp.paste(nameplate_img, (paste_x, paste_y), nameplate_img)
     # Back number
     number_img = composite_numbers(player_number, number_folder, coords["BackNumber"])
+    # --- ADD ROTATION TO BACK NUMBER ---
+    back_number_rotation = coords["NamePlate"].get("rotation", 0)
+    if back_number_rotation != 0:
+        number_img = number_img.rotate(back_number_rotation, expand=True, resample=Image.BICUBIC)
     x0, y0, x1, y1 = [int(round(c)) for c in coords["BackNumber"]]
-    temp.paste(number_img, (x0, y0), number_img)
+    # Adjust paste position if rotated
+    if back_number_rotation != 0:
+        num_w, num_h = number_img.size
+        box_w = int(round(x1 - x0))
+        box_h = int(round(y1 - y0))
+        paste_x = x0 + (box_w - num_w) // 2
+        paste_y = y0 + (box_h - num_h) // 2
+    else:
+        paste_x, paste_y = x0, y0
+    temp.paste(number_img, (paste_x, paste_y), number_img)
     # Add back shoulder numbers
     add_shoulder_number(temp, player_number, number_folder, coords["BLShoulder"])
     add_shoulder_number(temp, player_number, number_folder, coords["BRShoulder"])
     # Alpha mask
     alpha = blank_img.split()[-1]
     temp.putalpha(alpha)
-    out_name = f"{row['Internal ID']}-2.png"
+    out_name = f"{row['Name']}-2.png"
     out_path = os.path.join(OUTPUT_DIR, out_name)
     temp.save(out_path)
     print(f"Saved {out_path}")
@@ -343,12 +356,6 @@ def main():
         team_folder_name = f"{row['Team']}-{row['Color List']}"
         team_folder = os.path.join(BASE_DIR, team_folder_name)
         coords = load_coords_json(team_folder)
-        # Extract name and number from Jersey Characters
-        player_name, player_number = extract_name_and_number(row["Jersey Characters"])
-        # Patch row for downstream functions
-        row = row.copy()
-        row["Preferred Name"] = player_name
-        row["Player Number"] = player_number
         process_front(row, team_folder, coords)
         process_back(row, team_folder, coords)
         front_path = os.path.join(OUTPUT_DIR, f"{row['Name']}-3.png")
