@@ -1,7 +1,4 @@
-*.png
-*.otf
 *.txt
-*.json
 *.jsx
 *.csv
 /fonts/*
@@ -10,3 +7,17 @@
 *.ttf
 *.svg
 *.xlsx
+/output/*
+settings.json
+one.png
+two.png
+three.png
+four.png
+five.png
+six.png
+seven.png
+eight.png
+nine.png
+zero.png
+*/example/*
+.notdef.png
