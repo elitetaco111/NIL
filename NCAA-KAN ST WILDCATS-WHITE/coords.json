@@ -1,11 +1,11 @@
 {
-  "FrontNumber": [155,320,438,560],
+  "FrontNumber": [155,280,438,500],
   "BackNumber": [165,246,489,470],
   "NamePlate": {
     "coords": [159, 150, 489, 220],
     "color": "#371e44",
     "rotation": -0.7,
-    "spacing_factor": 0.01
+    "spacing_factor": -0.01
   },
   "FLShoulder": {
     "coords": [87,41,176,120],
