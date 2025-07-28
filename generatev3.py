@@ -151,9 +151,22 @@ def process_front(row, team_folder, coords):
     blank_front_path = os.path.join(blanks_folder, "front.png")
     blank_img = Image.open(blank_front_path).convert("RGBA")
     number_img = composite_numbers(player_number, number_folder, coords["FrontNumber"])
+    # --- ROTATE FRONT NUMBER BY INVERSE OF NAMEPLATE ROTATION ---
+    front_number_rotation = -coords["NamePlate"].get("rotation", 0)
+    if front_number_rotation != 0:
+        number_img = number_img.rotate(front_number_rotation, expand=True, resample=Image.BICUBIC)
     x0, y0, x1, y1 = [int(round(c)) for c in coords["FrontNumber"]]
+    # Center if rotated
+    if front_number_rotation != 0:
+        num_w, num_h = number_img.size
+        box_w = int(round(x1 - x0))
+        box_h = int(round(y1 - y0))
+        paste_x = x0 + (box_w - num_w) // 2
+        paste_y = y0 + (box_h - num_h) // 2
+    else:
+        paste_x, paste_y = x0, y0
     temp = blank_img.copy()
-    temp.paste(number_img, (x0, y0), number_img)
+    temp.paste(number_img, (paste_x, paste_y), number_img)
     # Add front shoulder numbers
     add_shoulder_number(temp, player_number, number_folder, coords["FLShoulder"])
     add_shoulder_number(temp, player_number, number_folder, coords["FRShoulder"])
