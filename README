@@ -7,10 +7,15 @@ dP     dP dP 88888888P     `88888'  `88888P' dP    dP `88888P' dP       `88888P8
                                                                                                           
                                                                                                          
 This program generates Jersey Images for the NIL Program at Rally House
-Credit: Dave Nissly with help from Anisha Gautam and Drew Brown
+Credit: Dave Nissly with help from Drew Brown and Anisha Gautam
 
 Current working version: generatev3.py
 
 Input is a file named jerseystocreate.csv placed in the same folder.
 Uses assets and coordinates provided to autocreate large batches of jersey images near instantly.
-Coded in python
+Asset Folders are named as "{Team}-{Color List}" and contain:
+- "blanks" folder with front.png and back.png
+- "number_front", "number_back", and "number_shoulder" folders with digit pngs (0-9) approx 2880 px tall
+- "fonts" folder with NamePlate.otf
+- "coords.json" file with bounding box coordinates for various elements and color hex for nameplate
+- examples folder with example jersey images for reference (not required for generation)
