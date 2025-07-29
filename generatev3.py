@@ -35,13 +35,40 @@ def composite_numbers(number_str, number_folder, target_box):
     digit_imgs = [Image.open(os.path.join(number_folder, f"{d}.png")).convert("RGBA") for d in digits]
     widths, heights = zip(*(img.size for img in digit_imgs))
 
-    # For single digit, treat as if it's two digits for scaling, but only render one
-    if len(digits) == 1:
+    x0, y0, x1, y1 = target_box
+    box_width = int(round(x1 - x0))
+    box_height = int(round(y1 - y0))
+
+    # Special case: single digit "1"
+    if len(digits) == 1 and digits[0] == '1':
+        # Only scale vertically, keep aspect ratio for width, and make 10% smaller
+        orig_img = digit_imgs[0]
+        scale = box_height / heights[0] * 0.9  # 10% smaller
+        new_width = int(widths[0] * scale)
+        new_height = int(heights[0] * scale)
+        scaled = orig_img.resize((new_width, new_height), Image.LANCZOS)
+        final = Image.new("RGBA", (box_width, box_height), (0,0,0,0))
+        offset_x = (box_width - new_width) // 2
+        offset_y = (box_height - new_height) // 2
+        final.paste(scaled, (offset_x, offset_y), scaled)
+        return final
+
+    # For single digit (not "1"), treat as if it's two digits for scaling, but only render one
+    elif len(digits) == 1:
         composite_width = widths[0] * 2
         composite_height = heights[0]
         composite = Image.new("RGBA", (composite_width, composite_height), (0,0,0,0))
         offset_x = (composite_width - widths[0]) // 2
         composite.paste(digit_imgs[0], (offset_x, 0), digit_imgs[0])
+        scale = box_height / composite_height
+        new_width = int(composite_width * scale)
+        new_height = box_height
+        scaled = composite.resize((new_width, new_height), Image.LANCZOS)
+        final = Image.new("RGBA", (box_width, box_height), (0,0,0,0))
+        offset_x = (box_width - new_width) // 2
+        final.paste(scaled, (offset_x, 0), scaled)
+        return final
+
     elif len(digits) == 2 and digits[0] == '1' and digits[1] == '1':
         # Special case for "11": no overlap, keep aspect ratio, small gap
         gap = int(widths[0] * 0.2)
@@ -75,12 +102,9 @@ def composite_numbers(number_str, number_folder, target_box):
             composite.paste(img, (x, y), img)
             x += img.size[0]
 
-    # Stretch the composite image to exactly fit the bounding box (ignore aspect ratio)
-    x0, y0, x1, y1 = target_box
-    box_width = int(round(x1 - x0))
-    box_height = int(round(y1 - y0))
-    stretched = composite.resize((box_width, box_height), Image.LANCZOS)
-    return stretched
+        # Stretch the composite image to exactly fit the bounding box (ignore aspect ratio)
+        stretched = composite.resize((box_width, box_height), Image.LANCZOS)
+        return stretched
 
 def fit_text_to_box(text, font_path, box_width, box_height, spacing_factor, max_font_size=400, min_font_size=10):
     # Binary search for best font size to fill the box, with a little margin for descenders
