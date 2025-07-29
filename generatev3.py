@@ -340,7 +340,7 @@ def process_combo(row, front_path, back_path):
     combo_img = Image.new("RGBA", (combo_width, combo_height), (0, 0, 0, 0))
 
     # Place back jersey at top-left
-    combo_img.paste(back_scaled, (-14, 90), back_scaled)
+    combo_img.paste(back_scaled, (-7, 90), back_scaled)
 
     # Place front jersey 40% down and 40% right, overlayed
     front_x = int(combo_width * 0.30) + 13
