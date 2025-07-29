@@ -4,6 +4,13 @@ import json
 from PIL import Image, ImageDraw, ImageFont
 import re
 
+# generatev2.py
+# DEPRECATED
+# No Longer the current working version, kept for reference as a working version that handles most cases correctly
+# This script generates jersey images based on a CSV input and team-specific assets.
+# It processes front and back jersey images, composites numbers, and renders nameplates.
+# It also creates a combined image for each player.
+
 # Paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSV_PATH = os.path.join(BASE_DIR, "jerseystocreate.csv")
