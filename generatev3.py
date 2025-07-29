@@ -176,7 +176,7 @@ def process_front(row, team_folder, coords):
     blank_img = Image.open(blank_front_path).convert("RGBA")
     number_img = composite_numbers(player_number, number_folder, coords["FrontNumber"])
     # --- ROTATE FRONT NUMBER BY INVERSE OF NAMEPLATE ROTATION ---
-    front_number_rotation = -coords["NamePlate"].get("rotation", 0)
+    front_number_rotation = coords["NamePlate"].get("rotation", 0)
     if front_number_rotation != 0:
         number_img = number_img.rotate(front_number_rotation, expand=True, resample=Image.BICUBIC)
     x0, y0, x1, y1 = [int(round(c)) for c in coords["FrontNumber"]]
