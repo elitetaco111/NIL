@@ -1,4 +1,4 @@
-# Created by Dave Nissly with asset help from Anisha Gautam and GitHub Copilot
+# Created by Dave Nissly with help from Drew Brown, Anisha Gautam, and GitHub Copilot
 # Jersey Generation Script - Rally House
 #
 # This script generates jersey images based on a CSV input file and team asset folders.
@@ -10,7 +10,7 @@
 # - "number_front", "number_back", and "number_shoulder" folders with digit pngs (0-9) approx 2880 px tall
 # - "fonts" folder with NamePlate.otf
 # - "coords.json" file with bounding box coordinates for various elements and color hex for nameplate
-# - examples folder with example jersey images for reference
+# - examples folder with example jersey images for reference (not required for generation)
 #
 
 import os
