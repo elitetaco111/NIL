@@ -9,6 +9,7 @@ dP     dP dP 88888888P     `88888'  `88888P' dP    dP `88888P' dP       `88888P8
 This program generates Jersey Images for the NIL Program at Rally House
 Credit: Dave Nissly with help from Drew Brown and Anisha Gautam
 
+Current Release: v1.0.1 (8/5/2025)
 Current working version: generatev3.py
 
 Input is a file named jerseystocreate.csv placed in the same folder.
