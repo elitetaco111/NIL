@@ -8,19 +8,19 @@
     "spacing_factor": -0.05
   },
   "FLShoulder": {
-    "coords": [87,41,176,120],
+    "coords": [87,65,176,140],
     "rotation": -65
   },
   "FRShoulder": {
-    "coords": [483,46,544,125],
-    "rotation": 65
+    "coords": [465,55,530,135],
+    "rotation": 70
   },
   "BLShoulder": {
-    "coords": [105,55,164,135],
+    "coords": [110,73,180,153],
     "rotation": -65
   },
   "BRShoulder": {
-    "coords": [473,45,554,125],
+    "coords": [473,60,554,140],
     "rotation": 65
   }
 }
