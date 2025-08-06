@@ -8,7 +8,7 @@
     "spacing_factor": 0.02
   },
   "FLShoulder": {
-    "coords": [1,270,65,380],
+    "coords": [1,270,70,380],
     "rotation": -5
   },
   "FRShoulder": {
