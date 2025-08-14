@@ -189,6 +189,11 @@ def process_front(row, team_folder, coords):
         paste_y = y0 + (box_h - num_h) // 2
     else:
         paste_x, paste_y = x0, y0
+
+    # Special case: shift single-digit '4' left by 20px on front
+    if str(player_number).strip() == '4':
+        paste_x -= 25
+
     temp = blank_img.copy()
     temp.paste(number_img, (paste_x, paste_y), number_img)
     # Add front shoulder numbers
@@ -254,6 +259,11 @@ def process_back(row, team_folder, coords):
         paste_y = y0 + (box_h - num_h) // 2
     else:
         paste_x, paste_y = x0, y0
+
+    # Special case: shift single-digit '4' left by 20px on back
+    if str(player_number).strip() == '4':
+        paste_x -= 25
+
     temp.paste(number_img, (paste_x, paste_y), number_img)
     # Add back shoulder numbers
     add_shoulder_number(temp, player_number, number_folder, coords["BLShoulder"])
