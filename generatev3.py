@@ -13,6 +13,9 @@
 # - examples folder with example jersey images for reference (not required for generation)
 #
 
+#TODO 
+#Add custom logic to bring down single digit shoulder numbers
+
 import os
 import pandas as pd
 import json
