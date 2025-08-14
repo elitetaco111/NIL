@@ -193,6 +193,9 @@ def process_front(row, team_folder, coords):
     # Special case: shift single-digit '4' left by 30px on front
     if str(player_number).strip() == '4':
         paste_x -= 30
+    # Special case: shift single-digit '1' left by 30px on front
+    elif str(player_number).strip() == '1':
+        paste_x -= 5
 
     temp = blank_img.copy()
     temp.paste(number_img, (paste_x, paste_y), number_img)
@@ -260,9 +263,12 @@ def process_back(row, team_folder, coords):
     else:
         paste_x, paste_y = x0, y0
 
-    # Special case: shift single-digit '4' left by 20px on back
+    # Special case: shift single-digit '4' left by 25px on back
     if str(player_number).strip() == '4':
         paste_x -= 25
+    # Special case: shift single-digit '1' left by 25px on back
+    elif str(player_number).strip() == '1':
+        paste_x -= 0
 
     temp.paste(number_img, (paste_x, paste_y), number_img)
     # Add back shoulder numbers

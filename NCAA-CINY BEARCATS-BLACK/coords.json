@@ -1,6 +1,6 @@
 {
-  "FrontNumber": [124,400,454,620],
-  "BackNumber": [160,246,449,470],
+  "FrontNumber": [124,400,425,620],
+  "BackNumber": [160,246,449,480],
   "NamePlate": {
     "coords": [150, 150, 470, 220],
     "color": "#f1f0f4",
