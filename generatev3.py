@@ -190,9 +190,9 @@ def process_front(row, team_folder, coords):
     else:
         paste_x, paste_y = x0, y0
 
-    # Special case: shift single-digit '4' left by 20px on front
+    # Special case: shift single-digit '4' left by 30px on front
     if str(player_number).strip() == '4':
-        paste_x -= 25
+        paste_x -= 30
 
     temp = blank_img.copy()
     temp.paste(number_img, (paste_x, paste_y), number_img)
