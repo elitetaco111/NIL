@@ -2,7 +2,7 @@
   "FrontNumber": [155,300,438,590],
   "BackNumber": [160,240,449,530],
   "NamePlate": {
-    "coords": [145, 150, 465, 225],
+    "coords": [145, 145, 465, 220],
     "color": "#ffffff",
     "rotation": 0.5,
     "spacing_factor": 0.02
