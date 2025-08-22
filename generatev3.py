@@ -11,7 +11,6 @@
 # - "fonts" folder with NamePlate.otf
 # - "coords.json" file with bounding box coordinates for various elements and color hex for nameplate
 # - examples folder with example jersey images for reference (not required for generation)
-#
 
 #TODO 
 #Add custom logic to bring down single digit shoulder numbers
