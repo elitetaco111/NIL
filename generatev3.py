@@ -14,6 +14,7 @@
 
 #TODO 
 #Add custom logic to bring down single digit shoulder numbers
+#Check name shrinking placement logic
 
 import os
 import pandas as pd
