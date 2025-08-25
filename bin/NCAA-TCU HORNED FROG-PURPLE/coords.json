@@ -1,26 +1,26 @@
 {
-  "FrontNumber": [140,280,405,515],
-  "BackNumber": [160,246,450,470],
+  "FrontNumber": [140,270,435,510],
+  "BackNumber": [129,241,420,500],
   "NamePlate": {
-    "coords": [150, 155, 460, 223],
+    "coords": [135, 142, 435, 210],
     "color": "#b1b3b6",
-    "rotation": -0.7,
+    "rotation": 1.5,
     "spacing_factor": 0.06
   },
   "FLShoulder": {
-    "coords": [70,31,195,130],
-    "rotation": -65
+    "coords": [-40,300,65,390],
+    "rotation": -11
   },
   "FRShoulder": {
-    "coords": [463,31,564,130],
-    "rotation": 65
+    "coords": [610,290,700,380],
+    "rotation": 14
   },
   "BLShoulder": {
-    "coords": [70,31,195,130],
-    "rotation": -65
+    "coords": [-30,310,60,400],
+    "rotation": -9
   },
   "BRShoulder": {
-    "coords": [463,31,564,130],
-    "rotation": 65
+    "coords": [600,305,710,395],
+    "rotation": 12
   }
 }
