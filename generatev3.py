@@ -20,6 +20,7 @@ import pandas as pd
 import json
 from PIL import Image, ImageDraw, ImageFont
 import re
+import shutil
 
 # Paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -403,6 +404,8 @@ def extract_name_and_number(jersey_characters):
         return name, number
 
 def main():
+    if os.path.exists(OUTPUT_DIR):
+        shutil.rmtree(OUTPUT_DIR)
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
     df = pd.read_csv(CSV_PATH, encoding="utf-8")
