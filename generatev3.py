@@ -408,11 +408,19 @@ def main():
         shutil.rmtree(OUTPUT_DIR)
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
+
+    assets_root = os.path.join(BASE_DIR, "bin")  # new assets root
+
     df = pd.read_csv(CSV_PATH, encoding="utf-8")
     for idx, row in df.iterrows():
-        # Use Team and Color List to find the asset folder
+        # Use Team and Color List to find the asset folder under bin/
         team_folder_name = f"{row['Team']}-{row['Color List']}"
-        team_folder = os.path.join(BASE_DIR, team_folder_name)
+        team_folder = os.path.join(assets_root, team_folder_name)
+
+        if not os.path.isdir(team_folder):
+            print(f"[WARN] Assets not found for '{team_folder_name}' in {assets_root}. Skipping.")
+            continue
+
         coords = load_coords_json(team_folder)
         process_front(row, team_folder, coords)
         process_back(row, team_folder, coords)
