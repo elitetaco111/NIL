@@ -147,7 +147,8 @@ def hex_to_rgba(hex_color):
 def render_nameplate(text, font_path, nameplate_obj, rotation_angle=0, y_offset_extra=0):
     coords = nameplate_obj["coords"]
     color = nameplate_obj.get("color", "#FFFFFF")
-    spacing_factor = nameplate_obj.get("spacing_factor", 0.06) # Default to 0.06 if not present
+    spacing_factor = nameplate_obj.get("spacing_factor", 0.06)  # Default to 0.06 if not present
+    v_align = (nameplate_obj.get("vertical_align") or "top").lower()  # top | center | bottom
     x0, y0, x1, y1 = coords
     box_width = int(round(x1 - x0))
     box_height = int(round(y1 - y0))
@@ -158,15 +159,21 @@ def render_nameplate(text, font_path, nameplate_obj, rotation_angle=0, y_offset_
     draw = ImageDraw.Draw(img)
     fill_color = hex_to_rgba(color)
 
-    # Center the text horizontally
+    # Horizontal center
     x_cursor = (box_width - total_width) // 2
-    y_offset = (box_height - h) // 2 - bbox[1] + y_offset_extra
+
+    # Vertical alignment
+    if v_align == "center":
+        y_offset = (box_height - h) // 2 - bbox[1] + y_offset_extra
+    elif v_align == "bottom":
+        y_offset = box_height - h - bbox[1] + y_offset_extra
+    else:  # top (default)
+        y_offset = -bbox[1] + y_offset_extra
 
     for i, char in enumerate(text):
         draw.text((x_cursor, y_offset), char, font=font, fill=fill_color)
         x_cursor += char_widths[i] + spacing
 
-    # Rotate the nameplate image if needed
     if "rotation" in nameplate_obj:
         rotation_angle = nameplate_obj["rotation"]
     if rotation_angle != 0:
