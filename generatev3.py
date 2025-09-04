@@ -178,6 +178,15 @@ def render_nameplate(text, font_path, nameplate_obj, rotation_angle=0, y_offset_
         rotation_angle = nameplate_obj["rotation"]
     if rotation_angle != 0:
         img = img.rotate(rotation_angle, expand=True, resample=Image.BICUBIC)
+        # Crop transparent padding so top alignment remains true after rotation
+        bbox_img = img.getbbox()
+        if bbox_img:
+            img = img.crop(bbox_img)
+    else:
+        # Also crop for consistency when not rotated
+        bbox_img = img.getbbox()
+        if bbox_img:
+            img = img.crop(bbox_img)
     return img
 
 def process_front(row, team_folder, coords):
@@ -229,64 +238,48 @@ def process_back(row, team_folder, coords):
     font_path = os.path.join(fonts_folder, "NamePlate.otf")
     blank_back_path = os.path.join(blanks_folder, "back.png")
     blank_img = Image.open(blank_back_path).convert("RGBA")
-    # Nameplate
+
+    # Respect coords.json exactly (no Y shifting for long names)
     rotation_angle = coords["NamePlate"].get("rotation", 0)
-    y_offset_extra = 20 if len(player_name) >= 9 else 0
-
-    # Shift the bounding box down by y_offset_extra
-    nameplate_coords = coords["NamePlate"]["coords"].copy()
-    if y_offset_extra:
-        nameplate_coords = [
-            nameplate_coords[0],
-            nameplate_coords[1] + y_offset_extra,
-            nameplate_coords[2],
-            nameplate_coords[3] + y_offset_extra
-        ]
-    # Create a temporary NamePlate object with shifted coords
-    nameplate_obj = dict(coords["NamePlate"])
-    nameplate_obj["coords"] = nameplate_coords
-
+    nameplate_obj = dict(coords["NamePlate"])  # do not modify coords
     nameplate_img = render_nameplate(player_name.upper(), font_path, nameplate_obj, rotation_angle, 0)
-    x0, y0, x1, y1 = [int(round(c)) for c in nameplate_coords]
+
+    x0, y0, x1, y1 = [int(round(c)) for c in coords["NamePlate"]["coords"]]
     box_width = int(round(x1 - x0))
     box_height = int(round(y1 - y0))
-    if rotation_angle != 0:
-        np_w, np_h = nameplate_img.size
-        paste_x = x0 + (box_width - np_w) // 2
-        paste_y = y0 + (box_height - np_h) // 2
-    else:
-        paste_x, paste_y = x0, y0
+
+    # Top-align inside the box; center horizontally regardless of rotation
+    np_w, np_h = nameplate_img.size
+    paste_x = x0 + (box_width - np_w) // 2
+    paste_y = y0  # top aligned to the box
+
     temp = blank_img.copy()
     temp.paste(nameplate_img, (paste_x, paste_y), nameplate_img)
-    # Back number
+
+    # Back number (unchanged)
     number_img = composite_numbers(player_number, number_folder, coords["BackNumber"])
-    # --- ADD ROTATION TO BACK NUMBER ---
     back_number_rotation = coords["NamePlate"].get("rotation", 0)
     if back_number_rotation != 0:
         number_img = number_img.rotate(back_number_rotation, expand=True, resample=Image.BICUBIC)
     x0, y0, x1, y1 = [int(round(c)) for c in coords["BackNumber"]]
-    # Adjust paste position if rotated
     if back_number_rotation != 0:
         num_w, num_h = number_img.size
         box_w = int(round(x1 - x0))
         box_h = int(round(y1 - y0))
-        paste_x = x0 + (box_w - num_w) // 2
-        paste_y = y0 + (box_h - num_h) // 2
+        paste_x_num = x0 + (box_w - num_w) // 2
+        paste_y_num = y0 + (box_h - num_h) // 2
     else:
-        paste_x, paste_y = x0, y0
+        paste_x_num, paste_y_num = x0, y0
 
-    # Special case: shift single-digit '4' left by 25px on back
+    # Special cases
     if str(player_number).strip() == '4':
-        paste_x -= 25
-    # Special case: shift single-digit '1' left by 25px on back
+        paste_x_num -= 25
     elif str(player_number).strip() == '1':
-        paste_x -= 0
+        paste_x_num -= 0
 
-    temp.paste(number_img, (paste_x, paste_y), number_img)
-    # Add back shoulder numbers
+    temp.paste(number_img, (paste_x_num, paste_y_num), number_img)
     add_shoulder_number(temp, player_number, number_folder, coords["BLShoulder"])
     add_shoulder_number(temp, player_number, number_folder, coords["BRShoulder"])
-    # Alpha mask
     alpha = blank_img.split()[-1]
     temp.putalpha(alpha)
     out_name = f"{row['Name']}-2.png"
