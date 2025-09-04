@@ -96,6 +96,57 @@ def composite_numbers(number_str, number_folder, target_box):
         offset_x = (box_width - new_width) // 2
         final.paste(scaled, (offset_x, 0), scaled)
         return final
+
+    elif len(digits) == 2 and ('1' in digits):
+        # Two-digit case with exactly one '1': cap horizontal stretch of the other digit at 1.4x
+        # 1) Scale both digits to fit box height while preserving aspect
+        scaled = []
+        base_widths = []
+        for i, img in enumerate(digit_imgs):
+            s = box_height / float(img.size[1])
+            w = max(1, int(round(img.size[0] * s)))
+            base_widths.append(w)
+            scaled.append(img.resize((w, box_height), Image.LANCZOS))
+
+        base_total = sum(base_widths)
+        final = Image.new("RGBA", (box_width, box_height), (0,0,0,0))
+
+        if base_total <= box_width:
+            # 2) Add extra width only to the non-1 digit, capped at +40% (1.4x total)
+            idx_non1 = 0 if digits[0] != '1' else 1
+            non1_w = base_widths[idx_non1]
+            max_increase = int(round(non1_w * 0.4))  # CHANGE CAP HERE
+            extra_needed = box_width - base_total
+            increase = max(0, min(extra_needed, max_increase))
+
+            # Resize only the non-1 digit wider (others unchanged)
+            if increase > 0:
+                new_w = non1_w + increase
+                scaled[idx_non1] = scaled[idx_non1].resize((new_w, box_height), Image.LANCZOS)
+                base_widths[idx_non1] = new_w
+
+            comp_w = sum(base_widths)
+            composite = Image.new("RGBA", (comp_w, box_height), (0,0,0,0))
+            x = 0
+            for img in scaled:
+                composite.paste(img, (x, 0), img)
+                x += img.size[0]
+
+            # Center composite in box; leftover width becomes side padding
+            offset_x = (box_width - comp_w) // 2
+            final.paste(composite, (offset_x, 0), composite)
+            return final
+        else:
+            # 3) If too wide, uniformly compress horizontally to fit box width
+            comp_w = base_total
+            composite = Image.new("RGBA", (comp_w, box_height), (0,0,0,0))
+            x = 0
+            for img in scaled:
+                composite.paste(img, (x, 0), img)
+                x += img.size[0]
+            squeezed = composite.resize((box_width, box_height), Image.LANCZOS)
+            return squeezed
+
     else:
         composite_width = sum(widths)
         composite_height = max(heights)
