@@ -19,9 +19,10 @@
 import os
 import pandas as pd
 import json
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageChops, ImageMath
 import re
 import shutil
+import numpy as np
 
 # Paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -340,6 +341,45 @@ def add_shoulder_number(base_img, number_str, number_folder, shoulder_obj):
     # Paste the rotated number at the top-left of the bounding box
     base_img.paste(rotated_number, (x0, y0), rotated_number)
 
+def resize_rgba_premultiplied(img, size, resample=Image.LANCZOS):
+    if img.mode != "RGBA":
+        return img.resize(size, resample)
+
+    r, g, b, a = img.split()
+
+    # Premultiply RGB by alpha (in 0..255 space)
+    r = ImageChops.multiply(r, a)
+    g = ImageChops.multiply(g, a)
+    b = ImageChops.multiply(b, a)
+
+    # Resize channels
+    r = r.resize(size, resample)
+    g = g.resize(size, resample)
+    b = b.resize(size, resample)
+    a = a.resize(size, resample)
+
+    # Unpremultiply using NumPy (avoid dark halos)
+    r_arr = np.asarray(r, dtype=np.uint16)
+    g_arr = np.asarray(g, dtype=np.uint16)
+    b_arr = np.asarray(b, dtype=np.uint16)
+    a_arr = np.asarray(a, dtype=np.uint16)
+
+    mask = a_arr > 0
+    out_r = np.zeros_like(r_arr, dtype=np.uint8)
+    out_g = np.zeros_like(g_arr, dtype=np.uint8)
+    out_b = np.zeros_like(b_arr, dtype=np.uint8)
+
+    # Integer math with rounding: channel = (premult * 255) / alpha
+    out_r[mask] = ((r_arr[mask] * 255) + (a_arr[mask] // 2)) // a_arr[mask]
+    out_g[mask] = ((g_arr[mask] * 255) + (a_arr[mask] // 2)) // a_arr[mask]
+    out_b[mask] = ((b_arr[mask] * 255) + (a_arr[mask] // 2)) // a_arr[mask]
+
+    r_img = Image.fromarray(out_r, mode="L")
+    g_img = Image.fromarray(out_g, mode="L")
+    b_img = Image.fromarray(out_b, mode="L")
+
+    return Image.merge("RGBA", (r_img, g_img, b_img, a))
+
 def process_combo(row, front_path, back_path):
     combo_width, combo_height = 700, 1000
     scale = 0.68
@@ -348,12 +388,12 @@ def process_combo(row, front_path, back_path):
     front_img = Image.open(front_path).convert("RGBA")
     back_img = Image.open(back_path).convert("RGBA")
 
-    # Scale images
-    front_scaled = front_img.resize(
-        (int(front_img.width * scale), int(front_img.height * scale)), Image.LANCZOS
+    # Scale images (premultiplied-alpha safe)
+    front_scaled = resize_rgba_premultiplied(
+        front_img, (int(front_img.width * scale), int(front_img.height * scale)), Image.LANCZOS
     )
-    back_scaled = back_img.resize(
-        (int(back_img.width * scale), int(back_img.height * scale)), Image.LANCZOS
+    back_scaled = resize_rgba_premultiplied(
+        back_img, (int(back_img.width * scale), int(back_img.height * scale)), Image.LANCZOS
     )
 
     # Create blank canvas
@@ -367,10 +407,14 @@ def process_combo(row, front_path, back_path):
     front_y = int(combo_height * 0.18) + 70
     combo_img.paste(front_scaled, (front_x, front_y), front_scaled)
 
-    # Save combo image
+    # Save combo image (preserve ICC if available)
+    icc = front_img.info.get("icc_profile") or back_img.info.get("icc_profile")
     out_name = f"{row['Name']}-1.png"
     out_path = os.path.join(OUTPUT_DIR, out_name)
-    combo_img.save(out_path)
+    if icc:
+        combo_img.save(out_path, icc_profile=icc)
+    else:
+        combo_img.save(out_path)
     print(f"Saved {out_path}")
 
 def extract_last_name_and_suffix(full_name):
