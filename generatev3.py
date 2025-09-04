@@ -14,7 +14,6 @@
 
 #TODO 
 #Add custom logic to bring down single digit shoulder numbers
-#Check name shrinking placement logic
 
 import os
 import pandas as pd
@@ -144,6 +143,62 @@ def hex_to_rgba(hex_color):
     else:
         raise ValueError("Invalid hex color")
 
+def _srgb_to_linear(c):  # c in [0..1]
+    return np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+
+def _linear_to_srgb(c):  # c in [0..1]
+    return np.where(c <= 0.0031308, 12.92 * c, 1.055 * (c ** (1 / 2.4)) - 0.055)
+
+def resize_rgba_linear_pm(img, size, resample=Image.LANCZOS):
+    if img.mode != "RGBA":
+        return img.resize(size, resample)
+
+    # Split channels
+    r, g, b, a = img.split()
+    r = np.asarray(r, dtype=np.float32) / 255.0
+    g = np.asarray(g, dtype=np.float32) / 255.0
+    b = np.asarray(b, dtype=np.float32) / 255.0
+    a = np.asarray(a, dtype=np.float32) / 255.0
+
+    # Convert to linear light, premultiply by alpha
+    r_lin = _srgb_to_linear(r)
+    g_lin = _srgb_to_linear(g)
+    b_lin = _srgb_to_linear(b)
+    r_pm = r_lin * a
+    g_pm = g_lin * a
+    b_pm = b_lin * a
+
+    # Helper to resize float planes with Pillow
+    def _resize_plane(arrf):
+        pilf = Image.fromarray(arrf, mode="F")
+        return np.asarray(pilf.resize(size, resample), dtype=np.float32)
+
+    r_pm_rs = _resize_plane(r_pm)
+    g_pm_rs = _resize_plane(g_pm)
+    b_pm_rs = _resize_plane(b_pm)
+    a_rs    = _resize_plane(a)
+
+    # Unpremultiply (avoid div-by-zero), convert back to sRGB
+    eps = 1e-6
+    a_safe = np.maximum(a_rs, eps)
+    r_lin_rs = r_pm_rs / a_safe
+    g_lin_rs = g_pm_rs / a_safe
+    b_lin_rs = b_pm_rs / a_safe
+
+    r_srgb = _linear_to_srgb(np.clip(r_lin_rs, 0.0, 1.0))
+    g_srgb = _linear_to_srgb(np.clip(g_lin_rs, 0.0, 1.0))
+    b_srgb = _linear_to_srgb(np.clip(b_lin_rs, 0.0, 1.0))
+
+    r8 = np.clip(r_srgb * 255.0 + 0.5, 0, 255).astype(np.uint8)
+    g8 = np.clip(g_srgb * 255.0 + 0.5, 0, 255).astype(np.uint8)
+    b8 = np.clip(b_srgb * 255.0 + 0.5, 0, 255).astype(np.uint8)
+    a8 = np.clip(a_rs * 255.0 + 0.5, 0, 255).astype(np.uint8)
+
+    return Image.merge("RGBA", (Image.fromarray(r8, "L"),
+                                Image.fromarray(g8, "L"),
+                                Image.fromarray(b8, "L"),
+                                Image.fromarray(a8, "L")))
+
 def render_nameplate(text, font_path, nameplate_obj, rotation_angle=0, y_offset_extra=0):
     coords = nameplate_obj["coords"]
     color = nameplate_obj.get("color", "#FFFFFF")
@@ -177,7 +232,7 @@ def render_nameplate(text, font_path, nameplate_obj, rotation_angle=0, y_offset_
     if "rotation" in nameplate_obj:
         rotation_angle = nameplate_obj["rotation"]
     if rotation_angle != 0:
-        img = img.rotate(rotation_angle, expand=True, resample=Image.BICUBIC)
+        img = img.rotate(rotation_angle, expand=True, resample=Image.BICUBIC, fillcolor=(0,0,0,0))
         # Crop transparent padding so top alignment remains true after rotation
         bbox_img = img.getbbox()
         if bbox_img:
@@ -199,7 +254,7 @@ def process_front(row, team_folder, coords):
     # --- ROTATE FRONT NUMBER BY INVERSE OF NAMEPLATE ROTATION ---
     front_number_rotation = coords["NamePlate"].get("rotation", 0)
     if front_number_rotation != 0:
-        number_img = number_img.rotate(front_number_rotation, expand=True, resample=Image.BICUBIC)
+        number_img = number_img.rotate(front_number_rotation, expand=True, resample=Image.BICUBIC, fillcolor=(0,0,0,0))
     x0, y0, x1, y1 = [int(round(c)) for c in coords["FrontNumber"]]
     # Center if rotated
     if front_number_rotation != 0:
@@ -260,7 +315,7 @@ def process_back(row, team_folder, coords):
     number_img = composite_numbers(player_number, number_folder, coords["BackNumber"])
     back_number_rotation = coords["NamePlate"].get("rotation", 0)
     if back_number_rotation != 0:
-        number_img = number_img.rotate(back_number_rotation, expand=True, resample=Image.BICUBIC)
+        number_img = number_img.rotate(back_number_rotation, expand=True, resample=Image.BICUBIC, fillcolor=(0,0,0,0))
     x0, y0, x1, y1 = [int(round(c)) for c in coords["BackNumber"]]
     if back_number_rotation != 0:
         num_w, num_h = number_img.size
@@ -329,7 +384,7 @@ def add_shoulder_number(base_img, number_str, number_folder, shoulder_obj):
     shoulder_squish = 0.65  # 65% of the normal width
     new_width = int(composite_width * scale * shoulder_squish)
     new_height = box_height
-    scaled = composite.resize((new_width, new_height), Image.LANCZOS)
+    scaled = composite.resize((max(1, new_width), max(1, new_height)), Image.LANCZOS)
 
     # Center horizontally in the bounding box
     final = Image.new("RGBA", (box_width, box_height), (0,0,0,0))
@@ -337,48 +392,9 @@ def add_shoulder_number(base_img, number_str, number_folder, shoulder_obj):
     final.paste(scaled, (offset_x, 0), scaled)
 
     # Rotate the number image
-    rotated_number = final.rotate(rotation, expand=True, resample=Image.BICUBIC)
+    rotated_number = final.rotate(rotation, expand=True, resample=Image.BICUBIC, fillcolor=(0,0,0,0))
     # Paste the rotated number at the top-left of the bounding box
     base_img.paste(rotated_number, (x0, y0), rotated_number)
-
-def resize_rgba_premultiplied(img, size, resample=Image.LANCZOS):
-    if img.mode != "RGBA":
-        return img.resize(size, resample)
-
-    r, g, b, a = img.split()
-
-    # Premultiply RGB by alpha (in 0..255 space)
-    r = ImageChops.multiply(r, a)
-    g = ImageChops.multiply(g, a)
-    b = ImageChops.multiply(b, a)
-
-    # Resize channels
-    r = r.resize(size, resample)
-    g = g.resize(size, resample)
-    b = b.resize(size, resample)
-    a = a.resize(size, resample)
-
-    # Unpremultiply using NumPy (avoid dark halos)
-    r_arr = np.asarray(r, dtype=np.uint16)
-    g_arr = np.asarray(g, dtype=np.uint16)
-    b_arr = np.asarray(b, dtype=np.uint16)
-    a_arr = np.asarray(a, dtype=np.uint16)
-
-    mask = a_arr > 0
-    out_r = np.zeros_like(r_arr, dtype=np.uint8)
-    out_g = np.zeros_like(g_arr, dtype=np.uint8)
-    out_b = np.zeros_like(b_arr, dtype=np.uint8)
-
-    # Integer math with rounding: channel = (premult * 255) / alpha
-    out_r[mask] = ((r_arr[mask] * 255) + (a_arr[mask] // 2)) // a_arr[mask]
-    out_g[mask] = ((g_arr[mask] * 255) + (a_arr[mask] // 2)) // a_arr[mask]
-    out_b[mask] = ((b_arr[mask] * 255) + (a_arr[mask] // 2)) // a_arr[mask]
-
-    r_img = Image.fromarray(out_r, mode="L")
-    g_img = Image.fromarray(out_g, mode="L")
-    b_img = Image.fromarray(out_b, mode="L")
-
-    return Image.merge("RGBA", (r_img, g_img, b_img, a))
 
 def process_combo(row, front_path, back_path):
     combo_width, combo_height = 700, 1000
@@ -388,11 +404,11 @@ def process_combo(row, front_path, back_path):
     front_img = Image.open(front_path).convert("RGBA")
     back_img = Image.open(back_path).convert("RGBA")
 
-    # Scale images (premultiplied-alpha safe)
-    front_scaled = resize_rgba_premultiplied(
+    # Scale images (linear-light premultiplied alpha)
+    front_scaled = resize_rgba_linear_pm(
         front_img, (int(front_img.width * scale), int(front_img.height * scale)), Image.LANCZOS
     )
-    back_scaled = resize_rgba_premultiplied(
+    back_scaled = resize_rgba_linear_pm(
         back_img, (int(back_img.width * scale), int(back_img.height * scale)), Image.LANCZOS
     )
 
