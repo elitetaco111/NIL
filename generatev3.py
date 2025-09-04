@@ -404,6 +404,16 @@ def extract_name_and_number(jersey_characters):
         number = ''.join([c for c in jersey_characters if c.isdigit()])
         return name, number
 
+def read_csv_with_fallback(path):
+    for enc in ("utf-8-sig", "cp1252", "latin1"):
+        try:
+            df = pd.read_csv(path, encoding=enc)
+            print(f"[INFO] Loaded CSV with encoding: {enc}")
+            return df
+        except UnicodeDecodeError:
+            continue
+    raise UnicodeDecodeError("Could not decode CSV with common encodings.")
+
 def main():
     if os.path.exists(OUTPUT_DIR):
         shutil.rmtree(OUTPUT_DIR)
@@ -412,7 +422,8 @@ def main():
 
     assets_root = os.path.join(BASE_DIR, "bin")  # new assets root
 
-    df = pd.read_csv(CSV_PATH, encoding="utf-8")
+    # df = pd.read_csv(CSV_PATH, encoding="utf-8")
+    df = read_csv_with_fallback(CSV_PATH)
     for idx, row in df.iterrows():
         # Use Team and Color List to find the asset folder under bin/
         team_folder_name = f"{row['Team']}-{row['Color List']}"
