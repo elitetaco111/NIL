@@ -18,7 +18,7 @@
 import os
 import pandas as pd
 import json
-from PIL import Image, ImageDraw, ImageFont, ImageChops, ImageMath
+from PIL import Image, ImageDraw, ImageFont
 import re
 import shutil
 import numpy as np
@@ -115,7 +115,7 @@ def composite_numbers(number_str, number_folder, target_box):
             # 2) Add extra width only to the non-1 digit, capped at +40% (1.4x total)
             idx_non1 = 0 if digits[0] != '1' else 1
             non1_w = base_widths[idx_non1]
-            max_increase = int(round(non1_w * 0.4))  # CHANGE CAP HERE
+            max_increase = int(round(non1_w * 0.1))  # CHANGE CAP HERE
             extra_needed = box_width - base_total
             increase = max(0, min(extra_needed, max_increase))
 
@@ -467,7 +467,7 @@ def process_combo(row, front_path, back_path):
     combo_img = Image.new("RGBA", (combo_width, combo_height), (0, 0, 0, 0))
 
     # Place back jersey at top-left
-    combo_img.paste(back_scaled, (-7, 90), back_scaled)
+    combo_img.paste(back_scaled, (0, 90), back_scaled)
 
     # Place front jersey 40% down and 40% right, overlayed
     front_x = int(combo_width * 0.30) + 13
