@@ -1,8 +1,8 @@
 {
   "FrontNumber": [160,290,430,570],
-  "BackNumber": [170,280,430,550],
+  "BackNumber": [175,280,435,550],
   "NamePlate": {
-    "coords": [150, 175, 465, 245],
+    "coords": [150, 185, 465, 255],
     "color": "#0651a0",
     "rotation": 0.5,
     "spacing_factor": 0.0
