@@ -12,7 +12,7 @@
     "rotation": -65
   },
   "FRShoulder": {
-    "coords": [460,50,578,135],
+    "coords": [460,57,578,142],
     "rotation": 65
   },
   "BLShoulder": {
@@ -20,7 +20,7 @@
     "rotation": -65
   },
   "BRShoulder": {
-    "coords": [445,40,573,130],
+    "coords": [445,47,573,137],
     "rotation": 65
   }
 }
