@@ -484,6 +484,26 @@ def process_combo(row, front_path, back_path):
         combo_img.save(out_path)
     print(f"Saved {out_path}")
 
+def apply_overlay_to_file(result_path, overlay_img):
+    try:
+        base_pil = Image.open(result_path)
+        icc = base_pil.info.get("icc_profile")
+        base = base_pil.convert("RGBA")
+
+        ov = overlay_img
+        if ov.size != base.size:
+            ov = ov.resize(base.size, Image.LANCZOS)
+
+        # Overlay on top
+        base.paste(ov, (0, 0), ov)
+
+        if icc:
+            base.save(result_path, icc_profile=icc)
+        else:
+            base.save(result_path)
+    except Exception as e:
+        print(f"[WARN] Failed to overlay youth.png on {result_path}: {e}")
+
 def extract_last_name_and_suffix(full_name):
     # Remove nicknames in quotes
     name = re.sub(r'"[^"]*"', '', full_name).strip()
@@ -533,6 +553,10 @@ def main():
 
     assets_root = os.path.join(BASE_DIR, "bin")  # new assets root
 
+    # Prepare youth overlay (lazy-load)
+    youth_overlay_img = None
+    youth_overlay_path = os.path.join(assets_root, "youth.png")
+
     # df = pd.read_csv(CSV_PATH, encoding="utf-8")
     df = read_csv_with_fallback(CSV_PATH)
     for idx, row in df.iterrows():
@@ -550,6 +574,23 @@ def main():
         front_path = os.path.join(OUTPUT_DIR, f"{row['Name']}-3.png")
         back_path = os.path.join(OUTPUT_DIR, f"{row['Name']}-2.png")
         process_combo(row, front_path, back_path)
+
+        # Youth overlay on all three outputs if needed
+        is_youth = str(row.get("Mens or Youth", "")).strip().lower() == "youth"
+        if is_youth:
+            if youth_overlay_img is None:
+                if os.path.exists(youth_overlay_path):
+                    youth_overlay_img = Image.open(youth_overlay_path).convert("RGBA")
+                else:
+                    print(f"[WARN] youth.png not found at {youth_overlay_path}. Skipping youth overlay.")
+                    youth_overlay_img = False  # mark as unavailable
+
+            if youth_overlay_img:
+                combo_path = os.path.join(OUTPUT_DIR, f"{row['Name']}-1.png")
+                # Overlay on top of each result image
+                apply_overlay_to_file(front_path, youth_overlay_img)
+                apply_overlay_to_file(back_path, youth_overlay_img)
+                apply_overlay_to_file(combo_path, youth_overlay_img)
 
 if __name__ == "__main__":
     main()
