@@ -161,24 +161,45 @@ def composite_numbers(number_str, number_folder, target_box):
         stretched = composite.resize((box_width, box_height), Image.LANCZOS)
         return stretched
 
-def fit_text_to_box(text, font_path, box_width, box_height, spacing_factor, max_font_size=400, min_font_size=10):
+def fit_text_to_box(text, font_path, box_width, box_height, spacing_factor, word_spacing_factor=0.33, max_font_size=400, min_font_size=10):
     # Binary search for best font size to fill the box, with a little margin for descenders
     best_font = None
     best_size = None
     margin = int(box_height * 0.08)  # 8% margin at the bottom
 
+    def _advance(font_obj, s):
+        # Prefer accurate advance width when available
+        if hasattr(font_obj, "getlength"):
+            return font_obj.getlength(s)
+        bbox = font_obj.getbbox(s)
+        return bbox[2] - bbox[0]
+
     while min_font_size <= max_font_size:
         mid = (min_font_size + max_font_size) // 2
         font = ImageFont.truetype(font_path, mid)
-        # Calculate total width with spacing
-        char_widths = [font.getbbox(char)[2] - font.getbbox(char)[0] for char in text]
-        spacing = int(mid * spacing_factor)
-        total_width = sum(char_widths) + spacing * (len(text) - 1)
+
+        spacing = int(mid * spacing_factor)          # letter-to-letter spacing
+        word_spacing = int(mid * word_spacing_factor)  # space between words (single increment)
+
+        # Measure char advances; treat spaces as 0 here (we add word_spacing separately)
+        char_advances = [(_advance(font, ch) if ch != ' ' else 0) for ch in text]
+
+        # Compute total width using the same rules we use when drawing
+        total_width = 0
+        for i, ch in enumerate(text):
+            if ch == ' ':
+                total_width += word_spacing
+            else:
+                total_width += char_advances[i]
+                # add letter-spacing only if next char is not a space
+                if i < len(text) - 1 and text[i + 1] != ' ':
+                    total_width += spacing
+
         bbox = font.getbbox(text)
         h = bbox[3] - bbox[1]
         if total_width <= box_width and h <= (box_height - margin):
             best_font = font
-            best_size = (total_width, h, bbox, spacing, char_widths)
+            best_size = (total_width, h, bbox, spacing, char_advances, word_spacing)
             min_font_size = mid + 1
         else:
             max_font_size = mid - 1
@@ -254,12 +275,13 @@ def render_nameplate(text, font_path, nameplate_obj, rotation_angle=0, y_offset_
     coords = nameplate_obj["coords"]
     color = nameplate_obj.get("color", "#FFFFFF")
     spacing_factor = nameplate_obj.get("spacing_factor", 0.06)  # Default to 0.06 if not present
+    word_spacing_factor = nameplate_obj.get("word_spacing_factor", 0.33)  # 1/3 em default
     v_align = (nameplate_obj.get("vertical_align") or "top").lower()  # top | center | bottom
     x0, y0, x1, y1 = coords
     box_width = int(round(x1 - x0))
     box_height = int(round(y1 - y0))
-    font, (total_width, h, bbox, spacing, char_widths) = fit_text_to_box(
-        text, font_path, box_width, box_height, spacing_factor
+    font, (total_width, h, bbox, spacing, char_widths, word_spacing) = fit_text_to_box(
+        text, font_path, box_width, box_height, spacing_factor, word_spacing_factor
     )
     img = Image.new("RGBA", (box_width, box_height), (0,0,0,0))
     draw = ImageDraw.Draw(img)
@@ -276,9 +298,16 @@ def render_nameplate(text, font_path, nameplate_obj, rotation_angle=0, y_offset_
     else:  # top (default)
         y_offset = -bbox[1] + y_offset_extra
 
+    # Draw with special handling for spaces
     for i, char in enumerate(text):
+        if char == ' ':
+            x_cursor += word_spacing  # single increment; no letter-spacing around spaces
+            continue
+
         draw.text((x_cursor, y_offset), char, font=font, fill=fill_color)
-        x_cursor += char_widths[i] + spacing
+        x_cursor += char_widths[i]
+        if i < len(text) - 1 and text[i + 1] != ' ':
+            x_cursor += spacing
 
     if "rotation" in nameplate_obj:
         rotation_angle = nameplate_obj["rotation"]
