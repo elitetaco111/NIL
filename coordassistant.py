@@ -74,7 +74,7 @@ class CoordsBuilderApp:
             from_=-180,
             to=180,
             orient=tk.HORIZONTAL,
-            resolution=1,
+            resolution=0.1,
             command=self.on_rotation_slider,
             state=tk.DISABLED
         )
@@ -307,7 +307,7 @@ class CoordsBuilderApp:
             if entry.get("has_rotation"):
                 self.rotation_scale.config(state=tk.NORMAL)
                 self.rotation_scale.set(entry.get("rotation", 0.0))
-                self.rotation_value_label.config(text=f"{entry.get('rotation', 0.0):.0f}°")
+                self.rotation_value_label.config(text=f"{entry.get('rotation', 0.0):.1f}°")
                 self.rotation_entry.config(state=tk.NORMAL)
                 self.rotation_entry.delete(0, tk.END)
                 self.rotation_entry.insert(0, f"{entry.get('rotation', 0.0):.2f}")
@@ -581,7 +581,7 @@ class CoordsBuilderApp:
         except (TypeError, ValueError):
             return
         entry["rotation"] = deg
-        self.rotation_value_label.config(text=f"{deg:.0f}°")
+        self.rotation_value_label.config(text=f"{deg:.1f}°")
         if self.rotation_entry["state"] == tk.NORMAL:
             self._control_guard = True
             self.rotation_entry.delete(0, tk.END)
@@ -606,7 +606,7 @@ class CoordsBuilderApp:
         entry["rotation"] = deg
         self._control_guard = True
         self.rotation_scale.set(deg)
-        self.rotation_value_label.config(text=f"{deg:.0f}°")
+        self.rotation_value_label.config(text=f"{deg:.1f}°")
         self.rotation_entry.delete(0, tk.END)
         self.rotation_entry.insert(0, f"{deg:.2f}")
         self._control_guard = False
