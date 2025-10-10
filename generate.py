@@ -332,11 +332,12 @@ def process_front(row, team_folder, coords):
     blank_front_path = os.path.join(blanks_folder, "front.png")
     blank_img = Image.open(blank_front_path).convert("RGBA")
     number_img = composite_numbers(player_number, number_folder, coords["FrontNumber"])
-    # --- ROTATE FRONT NUMBER BY INVERSE OF NAMEPLATE ROTATION ---
-    front_number_rotation = coords["NamePlate"].get("rotation", 0)
+    
+    # --- ROTATE FRONT NUMBER BY rotation from coords.json if present ---
+    front_number_rotation = coords["FrontNumber"].get("rotation", coords["NamePlate"].get("rotation", 0))
     if front_number_rotation != 0:
         number_img = number_img.rotate(front_number_rotation, expand=True, resample=Image.BICUBIC, fillcolor=(0,0,0,0))
-    x0, y0, x1, y1 = [int(round(c)) for c in coords["FrontNumber"]]
+    x0, y0, x1, y1 = [int(round(c)) for c in coords["FrontNumber"]["coords"]]
     # Center if rotated
     if front_number_rotation != 0:
         num_w, num_h = number_img.size
@@ -394,10 +395,10 @@ def process_back(row, team_folder, coords):
 
     # Back number (unchanged)
     number_img = composite_numbers(player_number, number_folder, coords["BackNumber"])
-    back_number_rotation = coords["NamePlate"].get("rotation", 0)
+    back_number_rotation = coords["BackNumber"].get("rotation", coords["NamePlate"].get("rotation", 0))
     if back_number_rotation != 0:
         number_img = number_img.rotate(back_number_rotation, expand=True, resample=Image.BICUBIC, fillcolor=(0,0,0,0))
-    x0, y0, x1, y1 = [int(round(c)) for c in coords["BackNumber"]]
+    x0, y0, x1, y1 = [int(round(c)) for c in coords["BackNumber"]["coords"]]
     if back_number_rotation != 0:
         num_w, num_h = number_img.size
         box_w = int(round(x1 - x0))
