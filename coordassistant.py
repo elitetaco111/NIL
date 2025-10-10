@@ -199,11 +199,15 @@ class CoordsBuilderApp:
                 coords = list(map(float, base))
 
             meta = copy.deepcopy(base) if isinstance(base, dict) else None
-            has_rotation = isinstance(base, dict) and "rotation" in base
+
+            # Always allow rotation for FrontNumber and BackNumber
+            has_rotation = (
+                isinstance(base, dict) and "rotation" in base
+            ) or name in ("FrontNumber", "BackNumber")
             rotation_val = 0.0
             if has_rotation:
                 try:
-                    rotation_val = float(meta.get("rotation", 0.0))
+                    rotation_val = float(meta.get("rotation", 0.0)) if meta else 0.0
                 except (TypeError, ValueError):
                     rotation_val = 0.0
 
