@@ -1,5 +1,8 @@
 {
-  "FrontNumber": [140,423,390,620],
+  "FrontNumber": {
+    "coords": [140,423,390,620],
+    "rotation": -2
+  },
   "BackNumber": [163,226,455,480],
   "NamePlate": {
     "coords": [160, 135, 460, 197],
