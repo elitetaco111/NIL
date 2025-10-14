@@ -1,16 +1,24 @@
 {
-  "FrontNumber": [
-    186,
-    310,
-    360,
-    464
-  ],
-  "BackNumber": [
-    188,
-    207,
-    386,
-    410
-  ],
+  "FrontNumber": {
+    "coords": [
+      186,
+      310,
+      359,
+      463
+    ],
+    "rotation": 0.0,
+    "number_folder": "C:/Users/DaveNissly/Desktop/Git/NIL/bin/NCAA-KAN ST WILDCATS-Purple-Striped\\number_front"
+  },
+  "BackNumber": {
+    "coords": [
+      200,
+      208,
+      385,
+      385
+    ],
+    "rotation": 0.0,
+    "number_folder": "C:/Users/DaveNissly/Desktop/Git/NIL/bin/NCAA-KAN ST WILDCATS-Purple-Striped\\number_back"
+  },
   "NamePlate": {
     "coords": [
       171,
@@ -20,7 +28,7 @@
     ],
     "color": "#ffffff",
     "rotation": 0.0,
-    "spacing_factor": 0.06
+    "spacing_factor": 0.0
   },
   "FLShoulder": {
     "coords": [
@@ -29,7 +37,8 @@
       59,
       30
     ],
-    "rotation": -11.0
+    "rotation": -11.0,
+    "number_folder": "C:/Users/DaveNissly/Desktop/Git/NIL/bin/NCAA-KAN ST WILDCATS-Purple-Striped\\number_shoulder"
   },
   "FRShoulder": {
     "coords": [
@@ -38,7 +47,8 @@
       622,
       38
     ],
-    "rotation": 14.0
+    "rotation": 14.0,
+    "number_folder": "C:/Users/DaveNissly/Desktop/Git/NIL/bin/NCAA-KAN ST WILDCATS-Purple-Striped\\number_shoulder"
   },
   "BLShoulder": {
     "coords": [
@@ -47,7 +57,8 @@
       38,
       28
     ],
-    "rotation": -9.0
+    "rotation": -9.0,
+    "number_folder": "C:/Users/DaveNissly/Desktop/Git/NIL/bin/NCAA-KAN ST WILDCATS-Purple-Striped\\number_shoulder"
   },
   "BRShoulder": {
     "coords": [
@@ -56,6 +67,7 @@
       645,
       26
     ],
-    "rotation": 12.0
+    "rotation": 12.0,
+    "number_folder": "C:/Users/DaveNissly/Desktop/Git/NIL/bin/NCAA-KAN ST WILDCATS-Purple-Striped\\number_shoulder"
   }
 }
