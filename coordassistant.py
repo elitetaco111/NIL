@@ -34,6 +34,8 @@ class CoordsBuilderApp:
         self.text_entry = None
         self.font_entry = None
         self.font_browse_btn = None
+        self.number_entry = None
+        self.number_browse_btn = None
         self._control_guard = False
 
         self._build_ui()
@@ -117,6 +119,17 @@ class CoordsBuilderApp:
         self.font_entry.bind("<Return>", self.on_font_entry_change)
         self.font_browse_btn = tk.Button(font_row, text="Browse", command=self.on_browse_font, state=tk.DISABLED)
         self.font_browse_btn.pack(side=tk.LEFT, padx=(5, 0))
+
+        tk.Label(preview_frame, text="Number folder:").pack(anchor="w")
+        number_row = tk.Frame(preview_frame)
+        number_row.pack(fill=tk.X, pady=(0, 4))
+        self.number_entry = tk.Entry(number_row)
+        self.number_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.number_entry.config(state=tk.DISABLED)
+        self.number_entry.bind("<FocusOut>", self.on_number_entry_change)
+        self.number_entry.bind("<Return>", self.on_number_entry_change)
+        self.number_browse_btn = tk.Button(number_row, text="Browse", command=self.on_browse_number_folder, state=tk.DISABLED)
+        self.number_browse_btn.pack(side=tk.LEFT, padx=(5, 0))
         tk.Label(preview_frame, text="Text:").pack(anchor="w")
         self.text_entry = tk.Entry(preview_frame)
         self.text_entry.pack(fill=tk.X)
@@ -201,9 +214,10 @@ class CoordsBuilderApp:
             meta = copy.deepcopy(base) if isinstance(base, dict) else None
 
             # Always allow rotation for FrontNumber and BackNumber
+            is_number = name in ("FrontNumber", "BackNumber")
             has_rotation = (
                 isinstance(base, dict) and "rotation" in base
-            ) or name in ("FrontNumber", "BackNumber")
+            ) or is_number
             rotation_val = 0.0
             if has_rotation:
                 try:
@@ -220,11 +234,13 @@ class CoordsBuilderApp:
                     spacing_val = 0.06
 
             font_path = None
+            number_folder = None
             if isinstance(base, dict):
                 font_candidate = base.get("font")
                 if font_candidate:
                     resolved = self._resolve_font_path(font_candidate, base_dir_override=template_dir)
                     font_path = resolved or font_candidate
+                number_folder = base.get("number_folder")
 
             self.element_entries[name] = {
                 "coords": coords,
@@ -235,11 +251,13 @@ class CoordsBuilderApp:
                 "rotation": rotation_val,
                 "has_rotation": has_rotation,
                 "spacing": spacing_val,
-                "has_spacing": has_spacing,
-                "text": "",
+                "has_spacing": has_spacing and not is_number,
+                "text": "12" if is_number else "",
                 "font_path": font_path,
                 "preview_id": None,
-                "preview_photo": None
+                "preview_photo": None,
+                "is_number": is_number,
+                "number_folder": number_folder
             }
             self.element_listbox.insert(tk.END, self._label_for(name))
 
@@ -334,15 +352,32 @@ class CoordsBuilderApp:
                 self.spacing_value_label.config(text="--")
                 self.spacing_entry.config(state=tk.DISABLED)
                 self.spacing_entry.delete(0, tk.END)
-            self.font_entry.config(state=tk.NORMAL)
-            self.font_entry.delete(0, tk.END)
-            if entry.get("font_path"):
-                self.font_entry.insert(0, entry["font_path"])
-            self.font_browse_btn.config(state=tk.NORMAL)
+
+            if entry.get("is_number"):
+                self.font_entry.config(state=tk.DISABLED)
+                self.font_entry.delete(0, tk.END)
+                self.font_browse_btn.config(state=tk.DISABLED)
+                self.number_entry.config(state=tk.NORMAL)
+                self.number_entry.delete(0, tk.END)
+                if entry.get("number_folder"):
+                    self.number_entry.insert(0, entry["number_folder"])
+                self.number_browse_btn.config(state=tk.NORMAL)
+            else:
+                self.font_entry.config(state=tk.NORMAL)
+                self.font_entry.delete(0, tk.END)
+                if entry.get("font_path"):
+                    self.font_entry.insert(0, entry["font_path"])
+                self.font_browse_btn.config(state=tk.NORMAL)
+                self.number_entry.config(state=tk.DISABLED)
+                self.number_entry.delete(0, tk.END)
+                self.number_browse_btn.config(state=tk.DISABLED)
+
             self.text_entry.config(state=tk.NORMAL)
             self.text_entry.delete(0, tk.END)
             if entry.get("text"):
                 self.text_entry.insert(0, entry["text"])
+            elif entry.get("is_number"):
+                self.text_entry.insert(0, "12")
         else:
             self.include_check.config(state=tk.DISABLED)
             self.include_var.set(False)
@@ -678,6 +713,16 @@ class CoordsBuilderApp:
         entry["font_path"] = path or None
         self._update_preview(self.current_element)
 
+    def on_number_entry_change(self, _event=None):
+        if self._control_guard or not self.current_element:
+            return
+        entry = self.element_entries.get(self.current_element)
+        if not entry or not entry.get("is_number") or self.number_entry["state"] == tk.DISABLED:
+            return
+        path = self.number_entry.get().strip()
+        entry["number_folder"] = path or None
+        self._update_preview(self.current_element)
+
     def on_browse_font(self):
         if not self.current_element:
             return
@@ -695,6 +740,24 @@ class CoordsBuilderApp:
         entry = self.element_entries.get(self.current_element)
         if entry:
             entry["font_path"] = path
+            self._update_preview(self.current_element)
+
+    def on_browse_number_folder(self):
+        if not self.current_element:
+            return
+        path = filedialog.askdirectory(
+            title="Select number sprite folder"
+        )
+        if not path:
+            return
+        self._control_guard = True
+        self.number_entry.config(state=tk.NORMAL)
+        self.number_entry.delete(0, tk.END)
+        self.number_entry.insert(0, path)
+        self._control_guard = False
+        entry = self.element_entries.get(self.current_element)
+        if entry:
+            entry["number_folder"] = path
             self._update_preview(self.current_element)
 
     def _resolve_font_path(self, font_path, base_dir_override=None):
@@ -738,6 +801,34 @@ class CoordsBuilderApp:
         coords = entry.get("coords")
         if not coords or self.photo_image is None:
             return
+
+        if entry.get("is_number"):
+            number_str = (entry.get("text") or "").strip() or "12"
+            folder = entry.get("number_folder")
+            if not folder or not os.path.isdir(folder):
+                return
+            rotation = entry.get("rotation", 0.0) if entry.get("has_rotation") else 0.0
+            preview_img = self._render_number_preview(number_str, folder, coords, rotation)
+            if preview_img is None:
+                return
+            x0, y0, x1, y1 = coords
+            box_width = int(round(x1 - x0))
+            box_height = int(round(y1 - y0))
+            if rotation != 0:
+                paste_x = int(round(x0 + (box_width - preview_img.size[0]) / 2))
+                paste_y = int(round(y0 + (box_height - preview_img.size[1]) / 2))
+            else:
+                paste_x = int(round(x0))
+                paste_y = int(round(y0))
+            preview_photo = ImageTk.PhotoImage(preview_img)
+            entry["preview_photo"] = preview_photo
+            entry["preview_id"] = self.canvas.create_image(paste_x, paste_y, anchor=tk.NW, image=preview_photo)
+            if entry["rect_id"]:
+                self.canvas.tag_lower(entry["preview_id"], entry["rect_id"])
+            for hid in entry["handle_ids"]:
+                self.canvas.tag_raise(hid)
+            return
+
         text = (entry.get("text") or "").strip()
         if not text:
             return
@@ -924,10 +1015,30 @@ class CoordsBuilderApp:
                 if entry.get("has_spacing"):
                     spacing_val = float(entry.get("spacing", target.get("spacing_factor", 0.06) or 0.06))
                     target["spacing_factor"] = spacing_val
+                if entry.get("is_number") and entry.get("number_folder"):
+                    target["number_folder"] = entry["number_folder"]
             elif isinstance(target, list) and len(target) == 4:
-                output_data[name] = rounded
+                if entry.get("has_rotation"):
+                    output_data[name] = {
+                        "coords": rounded,
+                        "rotation": float(entry.get("rotation", 0.0))
+                    }
+                    if entry.get("is_number") and entry.get("number_folder"):
+                        output_data[name]["number_folder"] = entry["number_folder"]
+                else:
+                    output_data[name] = rounded
             else:
-                output_data[name] = rounded
+                if entry.get("has_rotation"):
+                    output_data[name] = {
+                        "coords": rounded,
+                        "rotation": float(entry.get("rotation", 0.0))
+                    }
+                    if entry.get("has_spacing"):
+                        output_data[name]["spacing_factor"] = float(entry.get("spacing", 0.06))
+                    if entry.get("is_number") and entry.get("number_folder"):
+                        output_data[name]["number_folder"] = entry["number_folder"]
+                else:
+                    output_data[name] = rounded
 
         save_dir = os.path.dirname(self.template_path) if self.template_path else self.base_dir
         out_path = os.path.join(save_dir, "temp-coords.json")
@@ -946,6 +1057,123 @@ class CoordsBuilderApp:
             )
         else:
             messagebox.showinfo("Saved", f"Coordinates saved to {out_path}")
+
+    def _render_number_preview(self, number_str, number_folder, coords, rotation_angle):
+        composed = self._compose_number_image(number_str, number_folder, coords)
+        if composed is None:
+            return None
+        if rotation_angle:
+            composed = composed.rotate(
+                rotation_angle,
+                expand=True,
+                resample=Image.BICUBIC,
+                fillcolor=(0, 0, 0, 0)
+            )
+            bbox_img = composed.getbbox()
+            if bbox_img:
+                composed = composed.crop(bbox_img)
+        return composed
+
+    def _compose_number_image(self, number_str, number_folder, coords):
+        digits = list(str(number_str).strip())
+        if not digits:
+            return None
+        try:
+            digit_imgs = [
+                Image.open(os.path.join(number_folder, f"{d}.png")).convert("RGBA")
+                for d in digits
+            ]
+        except (FileNotFoundError, OSError):
+            return None
+
+        widths, heights = zip(*(img.size for img in digit_imgs))
+        x0, y0, x1, y1 = coords
+        box_width = max(1, int(round(x1 - x0)))
+        box_height = max(1, int(round(y1 - y0)))
+
+        if len(digits) == 1 and digits[0] == "1":
+            orig = digit_imgs[0]
+            scale = box_height / heights[0] * 0.9
+            new_size = (int(widths[0] * scale), int(heights[0] * scale))
+            scaled = orig.resize(new_size, Image.LANCZOS)
+            final = Image.new("RGBA", (box_width, box_height), (0, 0, 0, 0))
+            offset = ((box_width - new_size[0]) // 2, (box_height - new_size[1]) // 2)
+            final.paste(scaled, offset, scaled)
+            return final
+
+        if len(digits) == 1:
+            composite_width = widths[0] * 2
+            composite_height = heights[0]
+            composite = Image.new("RGBA", (composite_width, composite_height), (0, 0, 0, 0))
+            offset_x = (composite_width - widths[0]) // 2
+            composite.paste(digit_imgs[0], (offset_x, 0), digit_imgs[0])
+            scale = box_height / composite_height
+            scaled = composite.resize((int(composite_width * scale), box_height), Image.LANCZOS)
+            final = Image.new("RGBA", (box_width, box_height), (0, 0, 0, 0))
+            final.paste(scaled, ((box_width - scaled.size[0]) // 2, 0), scaled)
+            return final
+
+        if len(digits) == 2 and digits[0] == "1" and digits[1] == "1":
+            gap = int(widths[0] * 0.2)
+            composite_width = widths[0] + widths[1] + gap
+            composite_height = max(heights)
+            composite = Image.new("RGBA", (composite_width, composite_height), (0, 0, 0, 0))
+            composite.paste(digit_imgs[0], (0, (composite_height - heights[0]) // 2), digit_imgs[0])
+            composite.paste(
+                digit_imgs[1],
+                (widths[0] + gap, (composite_height - heights[1]) // 2),
+                digit_imgs[1]
+            )
+            scale = box_height / composite_height
+            scaled = composite.resize((int(composite_width * scale), box_height), Image.LANCZOS)
+            final = Image.new("RGBA", (box_width, box_height), (0, 0, 0, 0))
+            final.paste(scaled, ((box_width - scaled.size[0]) // 2, 0), scaled)
+            return final
+
+        if len(digits) == 2 and ("1" in digits):
+            scaled = []
+            base_widths = []
+            for img in digit_imgs:
+                s = box_height / float(img.size[1])
+                w = max(1, int(round(img.size[0] * s)))
+                base_widths.append(w)
+                scaled.append(img.resize((w, box_height), Image.LANCZOS))
+            base_total = sum(base_widths)
+            final = Image.new("RGBA", (box_width, box_height), (0, 0, 0, 0))
+            if base_total <= box_width:
+                idx_non1 = 0 if digits[0] != "1" else 1
+                non1_w = base_widths[idx_non1]
+                max_increase = int(round(non1_w * 0.1))
+                extra_needed = box_width - base_total
+                increase = max(0, min(extra_needed, max_increase))
+                if increase > 0:
+                    new_w = non1_w + increase
+                    scaled[idx_non1] = scaled[idx_non1].resize((new_w, box_height), Image.LANCZOS)
+                    base_widths[idx_non1] = new_w
+                comp_w = sum(base_widths)
+                composite = Image.new("RGBA", (comp_w, box_height), (0, 0, 0, 0))
+                x = 0
+                for img in scaled:
+                    composite.paste(img, (x, 0), img)
+                    x += img.size[0]
+                final.paste(composite, ((box_width - comp_w) // 2, 0), composite)
+                return final
+            composite = Image.new("RGBA", (base_total, box_height), (0, 0, 0, 0))
+            x = 0
+            for img in scaled:
+                composite.paste(img, (x, 0), img)
+                x += img.size[0]
+            return composite.resize((box_width, box_height), Image.LANCZOS)
+
+        composite_width = sum(widths)
+        composite_height = max(heights)
+        composite = Image.new("RGBA", (composite_width, composite_height), (0, 0, 0, 0))
+        x = 0
+        for img in digit_imgs:
+            y = (composite_height - img.size[1]) // 2
+            composite.paste(img, (x, y), img)
+            x += img.size[0]
+        return composite.resize((box_width, box_height), Image.LANCZOS)
 
 
 def main():
