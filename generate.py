@@ -617,13 +617,40 @@ def main():
     youth_overlay_path = os.path.join(assets_root, "youth.png")
 
     df = read_csv_with_fallback(csv_path)
+
+    sport_column = None
+    for candidate in ("Sport Specific", "Sport"):
+        if candidate in df.columns:
+            sport_column = candidate
+            break
+
+    if sport_column is None:
+        print("[ERROR] Input CSV must include a 'Sport Specific' or 'Sport' column. Exiting.")
+        return
+
     for idx, row in df.iterrows():
-        # Use Team and Color List to find the asset folder under bin/
-        team_folder_name = f"{row['Team']}-{row['Color List']}"
-        team_folder = os.path.join(assets_root, team_folder_name)
+        # Identify sport folder first, then locate specific team/color assets within it
+        sport_value = str(row.get(sport_column, "")).strip()
+        if not sport_value or sport_value.lower() == "nan":
+            print(f"[WARN] Missing sport for row {idx}. Skipping.")
+            continue
+
+        sport_folder = os.path.join(assets_root, sport_value)
+        if not os.path.isdir(sport_folder):
+            print(f"[WARN] Sport assets not found for '{sport_value}' in {assets_root}. Skipping.")
+            continue
+
+        team_name = str(row.get("Team", "")).strip()
+        color_name = str(row.get("Color List", "")).strip()
+        if not team_name or not color_name:
+            print(f"[WARN] Missing team or color on row {idx}. Skipping.")
+            continue
+
+        team_folder_name = f"{team_name}-{color_name}"
+        team_folder = os.path.join(sport_folder, team_folder_name)
 
         if not os.path.isdir(team_folder):
-            print(f"[WARN] Assets not found for '{team_folder_name}' in {assets_root}. Skipping.")
+            print(f"[WARN] Assets not found for '{team_folder_name}' in {sport_folder}. Skipping.")
             continue
 
         coords = load_coords_json(team_folder)
