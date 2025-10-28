@@ -48,8 +48,35 @@ class CoordsBuilderApp:
         root = self.master
         root.geometry("1100x750")
 
-        sidebar = tk.Frame(root, padx=10, pady=10)
-        sidebar.pack(side=tk.LEFT, fill=tk.Y)
+        sidebar_container = tk.Frame(root)
+        sidebar_container.pack(side=tk.LEFT, fill=tk.Y)
+
+        self.sidebar_canvas = tk.Canvas(sidebar_container, borderwidth=0, highlightthickness=0)
+        self.sidebar_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        sidebar_scrollbar = tk.Scrollbar(sidebar_container, orient=tk.VERTICAL, command=self.sidebar_canvas.yview)
+        sidebar_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.sidebar_canvas.configure(yscrollcommand=sidebar_scrollbar.set)
+
+        sidebar = tk.Frame(self.sidebar_canvas, padx=10, pady=10)
+        sidebar_window = self.sidebar_canvas.create_window((0, 0), window=sidebar, anchor="nw")
+
+        def _refresh_sidebar_scroll(_event=None):
+            self.sidebar_canvas.configure(scrollregion=self.sidebar_canvas.bbox("all"))
+
+        def _resize_sidebar_canvas(event):
+            self.sidebar_canvas.itemconfigure(sidebar_window, width=event.width)
+
+        sidebar.bind("<Configure>", _refresh_sidebar_scroll)
+        self.sidebar_canvas.bind("<Configure>", _resize_sidebar_canvas)
+
+        def _on_sidebar_mousewheel(event):
+            delta = int(-event.delta / 120) if event.delta else 0
+            if delta != 0:
+                self.sidebar_canvas.yview_scroll(delta, "units")
+
+        sidebar.bind("<Enter>", lambda _e: self.sidebar_canvas.bind_all("<MouseWheel>", _on_sidebar_mousewheel))
+        sidebar.bind("<Leave>", lambda _e: self.sidebar_canvas.unbind_all("<MouseWheel>"))
 
         btn_frame = tk.Frame(sidebar)
         btn_frame.pack(fill=tk.X, pady=(0, 10))
