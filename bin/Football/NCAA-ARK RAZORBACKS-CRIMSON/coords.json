@@ -1,26 +1,73 @@
 {
-  "FrontNumber": [150,389,423,620],
-  "BackNumber": [160,246,449,500],
+  "FrontNumber": {
+    "coords": [
+      152,
+      392,
+      425,
+      602
+    ],
+    "rotation": 0.0,
+    "number_folder": "C:/Users/AnishaGautam/Downloads/NIL-transfer/bin/Football/NCAA-ARK RAZORBACKS-CRIMSON\\number_front"
+  },
+  "BackNumber": {
+    "coords": [
+      160,
+      260,
+      449,
+      485
+    ],
+    "rotation": 0.0,
+    "number_folder": "C:/Users/AnishaGautam/Downloads/NIL-transfer/bin/Football/NCAA-ARK RAZORBACKS-CRIMSON\\number_back"
+  },
   "NamePlate": {
-    "coords": [130, 135, 470, 200],
+    "coords": [
+      132,
+      158,
+      472,
+      228
+    ],
     "color": "#ffffff",
     "rotation": -0.4,
     "spacing_factor": 0.06
   },
   "FLShoulder": {
-    "coords": [0,1,4,5],
-    "rotation": -65
+    "coords": [
+      0,
+      1,
+      4,
+      5
+    ],
+    "rotation": -65.0,
+    "number_folder": "C:/Users/AnishaGautam/Downloads/NIL-transfer/bin/Football/NCAA-ARK RAZORBACKS-CRIMSON\\number_shoulder"
   },
   "FRShoulder": {
-    "coords": [0,1,4,5],
-    "rotation": 65
+    "coords": [
+      0,
+      1,
+      4,
+      5
+    ],
+    "rotation": 65.0,
+    "number_folder": "C:/Users/AnishaGautam/Downloads/NIL-transfer/bin/Football/NCAA-ARK RAZORBACKS-CRIMSON\\number_shoulder"
   },
   "BLShoulder": {
-    "coords": [0,1,4,5],
-    "rotation": -65
+    "coords": [
+      0,
+      1,
+      4,
+      5
+    ],
+    "rotation": -65.0,
+    "number_folder": "C:/Users/AnishaGautam/Downloads/NIL-transfer/bin/Football/NCAA-ARK RAZORBACKS-CRIMSON\\number_shoulder"
   },
   "BRShoulder": {
-    "coords": [0,1,4,5],
-    "rotation": 65
+    "coords": [
+      0,
+      1,
+      4,
+      5
+    ],
+    "rotation": 65.0,
+    "number_folder": "C:/Users/AnishaGautam/Downloads/NIL-transfer/bin/Football/NCAA-ARK RAZORBACKS-CRIMSON\\number_shoulder"
   }
 }

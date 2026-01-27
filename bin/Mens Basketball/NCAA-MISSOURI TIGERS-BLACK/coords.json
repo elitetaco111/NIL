@@ -1,0 +1,73 @@
+{
+  "FrontNumber": {
+    "coords": [
+      144,
+      296,
+      393,
+      441
+    ],
+    "rotation": 0.0,
+    "number_folder": "C:/Users/AnishaGautam/Downloads/NIL-transfer/bin/Mens Basketball/NCAA-MISSOURI TIGERS-BLACK\\number_front"
+  },
+  "BackNumber": {
+    "coords": [
+      176,
+      208,
+      436,
+      359
+    ],
+    "rotation": 0.0,
+    "number_folder": "C:/Users/AnishaGautam/Downloads/NIL-transfer/bin/Mens Basketball/NCAA-MISSOURI TIGERS-BLACK\\number_back"
+  },
+  "NamePlate": {
+    "coords": [
+      192,
+      115,
+      444,
+      182
+    ],
+    "color": "#ebab21",
+    "rotation": 0.0,
+    "spacing_factor": 0.0
+  },
+  "FLShoulder": {
+    "coords": [
+      52,
+      18,
+      59,
+      30
+    ],
+    "rotation": -11.0,
+    "number_folder": "C:/Users/AnishaGautam/Downloads/NIL-transfer/bin/Mens Basketball/NCAA-MISSOURI TIGERS-BLACK\\number_shoulder"
+  },
+  "FRShoulder": {
+    "coords": [
+      605,
+      21,
+      622,
+      38
+    ],
+    "rotation": 14.0,
+    "number_folder": "C:/Users/AnishaGautam/Downloads/NIL-transfer/bin/Mens Basketball/NCAA-MISSOURI TIGERS-BLACK\\number_shoulder"
+  },
+  "BLShoulder": {
+    "coords": [
+      25,
+      11,
+      38,
+      28
+    ],
+    "rotation": -9.0,
+    "number_folder": "C:/Users/AnishaGautam/Downloads/NIL-transfer/bin/Mens Basketball/NCAA-MISSOURI TIGERS-BLACK\\number_shoulder"
+  },
+  "BRShoulder": {
+    "coords": [
+      634,
+      16,
+      645,
+      26
+    ],
+    "rotation": 12.0,
+    "number_folder": "C:/Users/AnishaGautam/Downloads/NIL-transfer/bin/Mens Basketball/NCAA-MISSOURI TIGERS-BLACK\\number_shoulder"
+  }
+}

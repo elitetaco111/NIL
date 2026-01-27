@@ -1,0 +1,73 @@
+{
+  "FrontNumber": {
+    "coords": [
+      159,
+      363,
+      340,
+      532
+    ],
+    "rotation": -3.6,
+    "number_folder": "C:/Users/AnishaGautam/Downloads/NIL-transfer/bin/Mens Basketball/NCAA-CINY BEARCATS-Red-Cincy Red Old BBALL\\number_front"
+  },
+  "BackNumber": {
+    "coords": [
+      170,
+      179,
+      394,
+      362
+    ],
+    "rotation": 0.0,
+    "number_folder": "C:/Users/AnishaGautam/Downloads/NIL-transfer/bin/Mens Basketball/NCAA-CINY BEARCATS-Red-Cincy Red Old BBALL\\number_back"
+  },
+  "NamePlate": {
+    "coords": [
+      148,
+      90,
+      408,
+      148
+    ],
+    "color": "#ffffff",
+    "rotation": 0.0,
+    "spacing_factor": 0.0
+  },
+  "FLShoulder": {
+    "coords": [
+      52,
+      18,
+      59,
+      30
+    ],
+    "rotation": -11.0,
+    "number_folder": "C:/Users/AnishaGautam/Downloads/NIL-transfer/bin/Mens Basketball/NCAA-CINY BEARCATS-Red-Cincy Red Old BBALL\\number_shoulder"
+  },
+  "FRShoulder": {
+    "coords": [
+      605,
+      21,
+      622,
+      38
+    ],
+    "rotation": 14.0,
+    "number_folder": "C:/Users/AnishaGautam/Downloads/NIL-transfer/bin/Mens Basketball/NCAA-CINY BEARCATS-Red-Cincy Red Old BBALL\\number_shoulder"
+  },
+  "BLShoulder": {
+    "coords": [
+      25,
+      11,
+      38,
+      28
+    ],
+    "rotation": -9.0,
+    "number_folder": "C:/Users/AnishaGautam/Downloads/NIL-transfer/bin/Mens Basketball/NCAA-CINY BEARCATS-Red-Cincy Red Old BBALL\\number_shoulder"
+  },
+  "BRShoulder": {
+    "coords": [
+      634,
+      16,
+      645,
+      26
+    ],
+    "rotation": 12.0,
+    "number_folder": "C:/Users/AnishaGautam/Downloads/NIL-transfer/bin/Mens Basketball/NCAA-CINY BEARCATS-Red-Cincy Red Old BBALL\\number_shoulder"
+  }
+}

@@ -565,17 +565,38 @@ def extract_last_name_and_suffix(full_name):
     return f"{last_name} {suffix}".strip()
 
 def extract_name_and_number(jersey_characters):
-    # Extracts the name (letters and spaces) and number (digits) from Jersey Characters
-    match = re.match(r"([A-Za-z\s]+)\s*(\d+)$", jersey_characters.strip())
+    """Extract alphabetic name and numeric jersey value from the mixed field."""
+    if pd.isna(jersey_characters):
+        return "", ""
+
+    # Normalize to string so downstream .strip() calls do not fail on numeric input
+    if isinstance(jersey_characters, (int, np.integer)):
+        raw_value = str(jersey_characters)
+    elif isinstance(jersey_characters, float):
+        raw_value = str(int(jersey_characters)) if jersey_characters.is_integer() else str(jersey_characters)
+    else:
+        raw_value = str(jersey_characters)
+
+    value = raw_value.strip()
+    if not value:
+        return "", ""
+
+    # If the field only contains numbers, treat it as "no name" by request
+    digits_only = ''.join(ch for ch in value if ch.isdigit())
+    has_letters = any(ch.isalpha() for ch in value)
+    if digits_only and not has_letters:
+        return "", digits_only
+
+    match = re.match(r"([A-Za-z\s]+)\s*(\d+)$", value)
     if match:
         name = match.group(1).strip()
         number = match.group(2)
         return name, number
-    else:
-        # fallback: treat all non-digits as name, last digits as number
-        name = ''.join([c for c in jersey_characters if not c.isdigit()]).strip()
-        number = ''.join([c for c in jersey_characters if c.isdigit()])
-        return name, number
+
+    # fallback: treat all non-digits as name, remaining digits as number
+    name = ''.join([c for c in value if not c.isdigit()]).strip()
+    number = digits_only
+    return name, number
 
 def read_csv_with_fallback(path):
     for enc in ("utf-8-sig", "cp1252", "latin1"):

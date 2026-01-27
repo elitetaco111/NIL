@@ -1,9 +1,9 @@
 {
   "FrontNumber": {
     "coords": [
-      186,
+      180,
       310,
-      359,
+      353,
       463
     ],
     "rotation": 0.0,
@@ -14,7 +14,7 @@
       200,
       208,
       385,
-      385
+      410
     ],
     "rotation": 0.0,
     "number_folder": "C:/Users/DaveNissly/Desktop/Git/NIL/bin/NCAA-KAN ST WILDCATS-Purple-Striped\\number_back"
