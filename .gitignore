@@ -23,4 +23,6 @@ zero.png
 .notdef.png
 *.pdf
 coords-backup.json
-/CURVEDTEXT_Jerseys/*
+/CURVEDTEXT_Jerseys/
+__pycache__/
+*.pyc
