@@ -1,0 +1,66 @@
+{
+  "BackNumber": [
+    200,
+    250,
+    424,
+    475
+  ],
+  "NamePlate": {
+    "coords": [
+      140,
+      235,
+      484,
+      330
+    ],
+    "color": "#F0A92A",
+    "border": {
+      "type": "solid",
+      "color": "#F0A92A",
+      "width": 0.0
+    },
+    "curve": {
+      "type": "fan",
+      "angle": 17.247386759581882,
+      "radius": 750.0
+    },
+    "rotation": -0.4,
+    "spacing_factor": 0.05,
+    "font_size": 94
+  },
+  "FLShoulder": {
+    "coords": [
+      0,
+      1,
+      4,
+      5
+    ],
+    "rotation": -65
+  },
+  "FRShoulder": {
+    "coords": [
+      0,
+      1,
+      4,
+      5
+    ],
+    "rotation": 65
+  },
+  "BLShoulder": {
+    "coords": [
+      0,
+      1,
+      4,
+      5
+    ],
+    "rotation": -65
+  },
+  "BRShoulder": {
+    "coords": [
+      0,
+      1,
+      4,
+      5
+    ],
+    "rotation": 65
+  }
+}
